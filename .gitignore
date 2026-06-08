@@ -9,3 +9,4 @@ ThirdParty/CocoaSpice/.build/
 *.app
 .DS_Store
 Package.resolved
+.claude/
