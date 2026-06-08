@@ -13,6 +13,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = MainMenu.build()
         NSApp.activate(ignoringOtherApps: true)
 
+        // Allow opening a .vv passed on the command line (scripting / testing).
+        for arg in CommandLine.arguments.dropFirst() where arg.hasSuffix(".vv") {
+            openVV(at: URL(fileURLWithPath: arg))
+        }
+
         // If launched without a document, prompt to open one.
         DispatchQueue.main.async { [weak self] in
             guard let self, !self.didOpenAny else { return }

@@ -22,6 +22,8 @@ SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 APP_NAME="SpiceMac"
 OUT="$ROOT/build"
 APP="$OUT/$APP_NAME.app"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
 
 log() { printf '\033[1;34m[build-app]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[build-app] error:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -55,10 +57,35 @@ cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 cp "$BIN_PATH/$APP_NAME" "$APP/Contents/MacOS/$APP_NAME"
 
 # SwiftPM resource bundles (e.g. the compiled Metal shader for the renderer).
-# Place next to the executable so Bundle.module resolves at runtime.
+# SwiftPM resource bundles go in Contents/Resources (CocoaSpice's renderer loads
+# CocoaSpice_CocoaSpiceRenderer.bundle from mainBundle.resourceURL).
 for bundle in "$BIN_PATH"/*.bundle; do
-    cp -R "$bundle" "$APP/Contents/MacOS/"
+    cp -R "$bundle" "$APP/Contents/Resources/"
 done
+
+# SwiftPM does NOT compile .metal resources (only Xcode's build system does), so
+# compile the CocoaSpice shader into default.metallib inside the renderer bundle —
+# newDefaultLibraryWithBundle: needs it, or the display cannot render.
+RENDERER_DIR="$ROOT/ThirdParty/CocoaSpice/Sources/CocoaSpiceRenderer"
+RES_BUNDLE="$APP/Contents/Resources/CocoaSpice_CocoaSpiceRenderer.bundle"
+if [ -f "$RENDERER_DIR/CSShaders.metal" ] && [ -d "$RES_BUNDLE" ]; then
+    log "compiling Metal shader → default.metallib"
+    xcrun -sdk macosx metal -I "$RENDERER_DIR" -c "$RENDERER_DIR/CSShaders.metal" -o "$WORK/CSShaders.air"
+    xcrun -sdk macosx metallib "$WORK/CSShaders.air" -o "$RES_BUNDLE/default.metallib"
+    rm -f "$RES_BUNDLE/CSShaders.metal"            # raw source not needed at runtime
+    # Minimal Info.plist so it is a valid, signable bundle.
+    cat > "$RES_BUNDLE/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleIdentifier</key><string>org.spicemac.CocoaSpiceRenderer.resources</string>
+  <key>CFBundleName</key><string>CocoaSpiceRenderer</string>
+  <key>CFBundlePackageType</key><string>BNDL</string>
+</dict></plist>
+PLIST
+else
+    log "WARNING: renderer shader not found; display rendering may not work"
+fi
 
 # Native SPICE frameworks.
 for fw in "${frameworks[@]}"; do
@@ -84,7 +111,7 @@ find "$APP/Contents/Frameworks" -type d -name "*.framework" -print0 |
     while IFS= read -r -d '' fw; do
         codesign "${SIGN_ARGS[@]}" "$fw" 2>/dev/null || codesign "${SIGN_ARGS[@]}" "$fw"
     done
-for bundle in "$APP/Contents/MacOS/"*.bundle; do
+for bundle in "$APP/Contents/Resources/"*.bundle; do
     [ -e "$bundle" ] && codesign "${SIGN_ARGS[@]}" "$bundle"
 done
 

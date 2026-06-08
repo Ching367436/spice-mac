@@ -2,7 +2,7 @@
 .swiftpm/
 DerivedData/
 *.xcodeproj/xcuserdata/
-Frameworks/*.framework
+Frameworks/*
 !Frameworks/.gitkeep
 # ThirdParty/CocoaSpice is a vendored Apache-2.0 fork (committed). Ignore only its build output.
 ThirdParty/CocoaSpice/.build/
