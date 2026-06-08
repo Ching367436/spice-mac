@@ -182,8 +182,11 @@ final class SpiceWindowController: NSWindowController, NSWindowDelegate, NSMenuI
 
     func windowDidResignKey(_ notification: Notification) {
         // Release any held input so it does not stay latched in the guest when the
-        // user switches away.
+        // user switches away, and restore the macOS cursor — the window is no longer
+        // key, so updateHostCursorVisibility() shows it (covers same-app window
+        // switches / miniaturize that don't deactivate the app).
         displayView.router.releaseAll()
+        displayView.updateHostCursorVisibility()
     }
 
     func windowWillClose(_ notification: Notification) {

@@ -24,6 +24,11 @@ final class SpiceDisplayView: MTKView {
     /// Observer for the "Hide Mac Cursor" preference toggling at runtime.
     private var hideCursorPrefObserver: NSObjectProtocol?
 
+    /// Observer that restores the macOS cursor when the app deactivates (⌘-Tab,
+    /// ⌘H, …) — those don't fire mouseExited/resignFirstResponder, so without this
+    /// a hidden cursor could stay hidden system-wide.
+    private var appResignObserver: NSObjectProtocol?
+
     init() {
         // CSMetalRenderer reads `mtkView.device` at init, so the device must exist
         // before -attachDisplay creates the renderer.
@@ -53,12 +58,16 @@ final class SpiceDisplayView: MTKView {
             forName: .hideHostCursorChanged, object: nil, queue: .main) { [weak self] _ in
             self?.updateHostCursorVisibility()
         }
+        appResignObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.showHostCursor()
+        }
     }
 
     deinit {
         showHostCursor()
-        if let hideCursorPrefObserver {
-            NotificationCenter.default.removeObserver(hideCursorPrefObserver)
+        for observer in [hideCursorPrefObserver, appResignObserver].compactMap({ $0 }) {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 

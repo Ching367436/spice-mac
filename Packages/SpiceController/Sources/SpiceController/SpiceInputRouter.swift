@@ -83,16 +83,19 @@ public final class SpiceInputRouter {
                 heldModifiers.remove(kc)
                 sendKey(kc, pressed: false)
             }
-            // (isDown && held) or (!isDown && !held): no transition for this key.
-            // The rare shared-flag case (both L+R of a class) is handled by the
-            // reconcile below when the class flag finally clears.
+            // No transition for this key (isDown&&held or !isDown&&!held). NB: when
+            // both L+R of a class are held and one is released, the shared class flag
+            // stays set, so we cannot tell which side went up — that side stays
+            // "pressed" on the guest until the other is also released (macOS doesn't
+            // expose L/R direction here). Benign: same keysym, and it self-clears
+            // once the class flag finally clears.
         } else {
-            // Non-hold modifier (e.g. Caps Lock): toggle.
-            if heldModifiers.contains(kc) {
-                heldModifiers.remove(kc); sendKey(kc, pressed: false)
-            } else {
-                heldModifiers.insert(kc); sendKey(kc, pressed: true)
-            }
+            // Lock keys (Caps Lock) are edges, not holds: macOS reports a single
+            // flagsChanged per physical tap, so send a full press+release as one
+            // keystroke. Tracking it as "held" would send press-now / release-on-
+            // next-tap and latch it down on the guest in between.
+            sendKey(kc, pressed: true)
+            sendKey(kc, pressed: false)
         }
         reconcileModifiers(event.modifierFlags)
     }
