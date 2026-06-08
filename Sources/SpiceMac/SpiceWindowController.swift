@@ -6,7 +6,7 @@ import SpiceController
 /// Owns one SPICE session window: hosts the `SpiceDisplayView`, reflects
 /// connection state, resizes to the guest, and exposes the Connection/USB menu
 /// actions via the responder chain.
-final class SpiceWindowController: NSWindowController, NSWindowDelegate {
+final class SpiceWindowController: NSWindowController, NSWindowDelegate, NSMenuItemValidation {
 
     private let client: SpiceClient
     private let sourceURL: URL
@@ -179,15 +179,15 @@ final class SpiceWindowController: NSWindowController, NSWindowDelegate {
         guard let input = displayView.router.input else { return }
         // Left Ctrl (0x1D) + Left Alt (0x38) + Delete (extended 0xE053 → 0x153).
         let combo: [Int32] = [0x1D, 0x38, 0x153]
-        for code in combo { input.sendKey(.press, code: code) }
-        for code in combo.reversed() { input.sendKey(.release, code: code) }
+        for code in combo { input.send(.press, code: code) }
+        for code in combo.reversed() { input.send(.release, code: code) }
     }
 
     @objc func releaseCursor(_ sender: Any?) {
         displayView.router.releaseAll()
     }
 
-    override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
         case #selector(sendCtrlAltDel(_:)), #selector(releaseCursor(_:)):
             return displayView.router.input != nil
@@ -277,7 +277,7 @@ extension SpiceWindowController: CSUSBManagerDelegate {
         DispatchQueue.main.async { self.refreshUSBMenu() }
     }
 
-    func spiceUsbManager(_ usbManager: CSUSBManager, deviceError error: String, forDevice device: CSUSBDevice) {
+    func spiceUsbManager(_ usbManager: CSUSBManager, deviceError error: String, for device: CSUSBDevice) {
         DispatchQueue.main.async { self.presentTransientError(error) }
     }
 }

@@ -49,7 +49,8 @@ public final class SpiceInputRouter {
     private func sendKey(_ keyCode: UInt16, pressed: Bool) {
         guard let input,
               let code = SpiceScancode.cocoaSpiceCode(forMacVirtualKey: keyCode) else { return }
-        input.sendKey(pressed ? .press : .release, code: Int32(code))
+        // Swift imports CSInput's -sendKey:code: as send(_:code:).
+        input.send(pressed ? .press : .release, code: Int32(code))
     }
 
     /// Release everything we believe is held — keys, modifiers, and mouse buttons.

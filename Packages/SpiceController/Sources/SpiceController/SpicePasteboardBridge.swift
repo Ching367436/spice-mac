@@ -20,19 +20,19 @@ public final class SpicePasteboardBridge: NSObject, CSPasteboardDelegate {
     }
 
     @objc(canReadItemForType:)
-    public func canReadItem(forType type: CSPasteboardType) -> Bool {
+    public func canReadItem(for type: CSPasteboardType) -> Bool {
         guard let nsType = Self.nsType(type) else { return false }
         return pasteboard.availableType(from: [nsType]) != nil
     }
 
     @objc(dataForType:)
-    public func data(forType type: CSPasteboardType) -> Data? {
+    public func data(for type: CSPasteboardType) -> Data? {
         guard let nsType = Self.nsType(type) else { return nil }
         return pasteboard.data(forType: nsType)
     }
 
     @objc(setData:forType:)
-    public func setData(_ data: Data, forType type: CSPasteboardType) {
+    public func setData(_ data: Data, for type: CSPasteboardType) {
         guard let nsType = Self.nsType(type) else { return }
         // Assumes -clearContents was already sent for this guest→host update
         // (CocoaSpice clears before pushing new contents).
