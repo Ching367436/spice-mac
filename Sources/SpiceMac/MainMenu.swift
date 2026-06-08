@@ -68,6 +68,11 @@ enum MainMenu {
         viewMenu.addItem(withTitle: "Enter Full Screen",
                          action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
             .keyEquivalentModifierMask = [.control, .command]
+        viewMenu.addItem(.separator())
+        let hideCursor = NSMenuItem(title: "Hide Mac Cursor",
+                                    action: #selector(AppDelegate.toggleHideMacCursor(_:)), keyEquivalent: "")
+        hideCursor.state = Preferences.hideHostCursor ? .on : .off
+        viewMenu.addItem(hideCursor)
 
         // Window menu
         let windowItem = NSMenuItem()

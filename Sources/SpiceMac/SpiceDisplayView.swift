@@ -17,6 +17,13 @@ final class SpiceDisplayView: MTKView {
     /// change after the agent connects / a mode switch).
     private var displaySizeObservation: NSKeyValueObservation?
 
+    /// Whether we've hidden the macOS cursor (so only the guest cursor shows).
+    /// Tracked so hide/unhide stay balanced and the cursor can't get stuck hidden.
+    private var hostCursorHidden = false
+
+    /// Observer for the "Hide Mac Cursor" preference toggling at runtime.
+    private var hideCursorPrefObserver: NSObjectProtocol?
+
     init() {
         // CSMetalRenderer reads `mtkView.device` at init, so the device must exist
         // before -attachDisplay creates the renderer.
@@ -41,6 +48,18 @@ final class SpiceDisplayView: MTKView {
         preferredFramesPerSecond = 60
         wantsLayer = true
         layer?.isOpaque = true
+
+        hideCursorPrefObserver = NotificationCenter.default.addObserver(
+            forName: .hideHostCursorChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.updateHostCursorVisibility()
+        }
+    }
+
+    deinit {
+        showHostCursor()
+        if let hideCursorPrefObserver {
+            NotificationCenter.default.removeObserver(hideCursorPrefObserver)
+        }
     }
 
     func attachDisplay(_ display: CSDisplay) {
@@ -74,6 +93,7 @@ final class SpiceDisplayView: MTKView {
     }
 
     func detach() {
+        showHostCursor()
         if let attachedDisplay, let renderer {
             attachedDisplay.removeRenderer(renderer)
         }
@@ -175,8 +195,40 @@ final class SpiceDisplayView: MTKView {
         // Flush held keys/modifiers/buttons so nothing stays latched in the guest
         // when focus leaves (e.g. Cmd-Tab); also avoids the on-return modifier desync.
         router.releaseAll()
+        showHostCursor()
         return super.resignFirstResponder()
     }
+
+    // MARK: - Host cursor visibility (optional, gated on Preferences.hideHostCursor)
+
+    /// Hide the macOS cursor only when the user opted in, the window is key, and the
+    /// guest is in client (absolute) mouse mode (where the guest cursor overlay
+    /// tracks the pointer). In server mode we keep the host cursor visible.
+    private var shouldHideHostCursor: Bool {
+        Preferences.hideHostCursor
+            && window?.isKeyWindow == true
+            && router.input != nil
+            && router.input?.serverModeCursor == false
+    }
+
+    func updateHostCursorVisibility() {
+        if shouldHideHostCursor { hideHostCursor() } else { showHostCursor() }
+    }
+
+    private func hideHostCursor() {
+        guard !hostCursorHidden else { return }
+        NSCursor.hide()
+        hostCursorHidden = true
+    }
+
+    private func showHostCursor() {
+        guard hostCursorHidden else { return }
+        NSCursor.unhide()
+        hostCursorHidden = false
+    }
+
+    override func mouseEntered(with event: NSEvent) { updateHostCursorVisibility() }
+    override func mouseExited(with event: NSEvent) { showHostCursor() }
 
     override func keyDown(with event: NSEvent) {
         spiceInputLog("keyDown keyCode=\(event.keyCode) isFirstResponder=\(window?.firstResponder === self) hasInput=\(router.input != nil)")
@@ -197,7 +249,10 @@ final class SpiceDisplayView: MTKView {
     override func otherMouseDown(with event: NSEvent) { router.mouseButton(event, pressed: true) }
     override func otherMouseUp(with event: NSEvent) { router.mouseButton(event, pressed: false) }
 
-    override func mouseMoved(with event: NSEvent) { router.mouseMoved(event, in: self) }
+    override func mouseMoved(with event: NSEvent) {
+        updateHostCursorVisibility()
+        router.mouseMoved(event, in: self)
+    }
     override func mouseDragged(with event: NSEvent) { router.mouseMoved(event, in: self) }
     override func rightMouseDragged(with event: NSEvent) { router.mouseMoved(event, in: self) }
     override func otherMouseDragged(with event: NSEvent) { router.mouseMoved(event, in: self) }

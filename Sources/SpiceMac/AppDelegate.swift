@@ -4,7 +4,7 @@ import SpiceController
 
 /// App entry: builds the menu and opens Proxmox `.vv` SPICE files (via
 /// double-click, File ▸ Open, or drag-and-drop), spawning a window per session.
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     private var windowControllers: [SpiceWindowController] = []
     private var didOpenAny = false
@@ -38,6 +38,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func openDocument(_ sender: Any?) {
         presentOpenPanel()
+    }
+
+    // MARK: - Preferences
+
+    @objc func toggleHideMacCursor(_ sender: NSMenuItem) {
+        Preferences.hideHostCursor.toggle()
+        sender.state = Preferences.hideHostCursor ? .on : .off
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(toggleHideMacCursor(_:)) {
+            menuItem.state = Preferences.hideHostCursor ? .on : .off
+        }
+        return true
     }
 
     private func presentOpenPanel() {
