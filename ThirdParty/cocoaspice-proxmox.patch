@@ -1,0 +1,61 @@
+# spice-mac Proxmox patch for utmapp/CocoaSpice (Apache-2.0)
+# Adds -[CSConnection setProxy:ca:certSubject:] so a host app can drive a
+# Proxmox TLS-via-proxy connection (proxy + ca + cert-subject + verify=SUBJECT).
+# Apply from the CocoaSpice root with: git apply cocoaspice-proxmox.patch
+# (the new header CSConnection+Proxmox.h is added in full below)
+#
+--- /tmp/cocoaspice-pristine/Sources/CocoaSpice/CSConnection.m	2026-02-28 06:50:21
++++ Sources/CocoaSpice/CSConnection.m	2026-06-08 14:09:10
+@@ -15,6 +15,7 @@
+ //
+ 
+ #import "CocoaSpice.h"
++#import "CSConnection+Proxmox.h" // spice-mac fork addition
+ #import "CSChannel+Protected.h"
+ #import "CSCursor+Protected.h"
+ #import "CSDisplay+Protected.h"
+@@ -476,4 +477,34 @@
+     spice_session_disconnect(self.spiceSession);
+ }
+ 
++#pragma mark - Proxmox (spice-mac fork addition)
++
++- (void)setProxy:(NSString *)proxy ca:(NSString *)caPEM certSubject:(NSString *)certSubject {
++    if (proxy != nil) {
++        // Empty string clears any previously configured proxy.
++        g_object_set(self.spiceSession, "proxy", proxy.UTF8String, NULL);
++    }
++    if (caPEM != nil) {
++        GByteArray *array = g_byte_array_new();
++        NSData *data = [caPEM dataUsingEncoding:NSUTF8StringEncoding];
++        if (data.length > 0) {
++            g_byte_array_append(array, data.bytes, (guint)data.length);
++        }
++        // spice-gtk parses this blob as PEM text; NUL-terminate so it is safe to
++        // treat as a C string, matching how virt-viewer hands over the CA.
++        const guint8 nul = 0;
++        g_byte_array_append(array, &nul, 1);
++        g_object_set(self.spiceSession, "ca", array, NULL);
++        g_byte_array_unref(array);
++    }
++    if (certSubject != nil) {
++        // Verify the peer by certificate subject instead of hostname/pubkey: the
++        // Proxmox node cluster cert subject is what matches, not the proxy/token.
++        g_object_set(self.spiceSession,
++                     "cert-subject", certSubject.UTF8String,
++                     "verify", SPICE_SESSION_VERIFY_SUBJECT,
++                     NULL);
++    }
++}
++
+ @end
+--- /tmp/cocoaspice-pristine/Sources/CocoaSpice/include/CocoaSpice.h	2026-02-28 06:50:21
++++ Sources/CocoaSpice/include/CocoaSpice.h	2026-06-08 14:09:17
+@@ -19,6 +19,7 @@
+ 
+ #include "CSChannel.h"
+ #include "CSConnection.h"
++#include "CSConnection+Proxmox.h" // spice-mac fork addition
+ #include "CSConnectionDelegate.h"
+ #include "CSCursor.h"
+ #include "CSDisplay.h"
