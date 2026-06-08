@@ -161,6 +161,7 @@ extension SpiceClient: CSConnectionDelegate {
 
     public func spiceInputUnavailable(_ connection: CSConnection, input: CSInput) {
         onMain {
+            spiceInputLog("spiceInputUnavailable: inputs channel TORN DOWN")
             if self.primaryInput === input { self.primaryInput = nil }
             self.onInputUnavailable?(input)
         }
@@ -180,6 +181,7 @@ extension SpiceClient: CSConnectionDelegate {
 
     public func spiceAgentConnected(_ connection: CSConnection, supportingFeatures features: CSConnectionAgentFeature) {
         onMain {
+            spiceInputLog("spiceAgentConnected (monitorsConfig=\(features.contains(.monitorsConfig)))")
             self.agentConnected = true
             self.supportsDynamicResolution = features.contains(.monitorsConfig)
         }
