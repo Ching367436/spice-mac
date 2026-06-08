@@ -70,11 +70,11 @@ RENDERER_DIR="$ROOT/ThirdParty/CocoaSpice/Sources/CocoaSpiceRenderer"
 RES_BUNDLE="$APP/Contents/Resources/CocoaSpice_CocoaSpiceRenderer.bundle"
 if [ -f "$RENDERER_DIR/CSShaders.metal" ] && [ -d "$RES_BUNDLE" ]; then
     log "compiling Metal shader → default.metallib"
-    xcrun -sdk macosx metal -I "$RENDERER_DIR" -c "$RENDERER_DIR/CSShaders.metal" -o "$WORK/CSShaders.air"
-    xcrun -sdk macosx metallib "$WORK/CSShaders.air" -o "$RES_BUNDLE/default.metallib"
-    rm -f "$RES_BUNDLE/CSShaders.metal"            # raw source not needed at runtime
-    # Minimal Info.plist so it is a valid, signable bundle.
-    cat > "$RES_BUNDLE/Info.plist" <<PLIST
+    if xcrun -sdk macosx metal -I "$RENDERER_DIR" -c "$RENDERER_DIR/CSShaders.metal" -o "$WORK/CSShaders.air" 2>"$WORK/metal.log" \
+       && xcrun -sdk macosx metallib "$WORK/CSShaders.air" -o "$RES_BUNDLE/default.metallib" 2>>"$WORK/metal.log"; then
+        rm -f "$RES_BUNDLE/CSShaders.metal"        # raw source not needed at runtime
+        # Minimal Info.plist so it is a valid, signable bundle.
+        cat > "$RES_BUNDLE/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -83,6 +83,12 @@ if [ -f "$RENDERER_DIR/CSShaders.metal" ] && [ -d "$RES_BUNDLE" ]; then
   <key>CFBundlePackageType</key><string>BNDL</string>
 </dict></plist>
 PLIST
+        log "  default.metallib OK"
+    else
+        log "WARNING: Metal shader compile failed — the display will not render."
+        log "         Install the Metal toolchain, then re-run: xcodebuild -downloadComponent MetalToolchain"
+        sed 's/^/         metal: /' "$WORK/metal.log" 2>/dev/null | tail -2
+    fi
 else
     log "WARNING: renderer shader not found; display rendering may not work"
 fi
