@@ -47,9 +47,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         sender.state = Preferences.hideHostCursor ? .on : .off
     }
 
+    @objc func toggleShareClipboard(_ sender: NSMenuItem) {
+        Preferences.shareClipboard.toggle()
+        sender.state = Preferences.shareClipboard ? .on : .off
+    }
+
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        if menuItem.action == #selector(toggleHideMacCursor(_:)) {
+        switch menuItem.action {
+        case #selector(toggleHideMacCursor(_:)):
             menuItem.state = Preferences.hideHostCursor ? .on : .off
+        case #selector(toggleShareClipboard(_:)):
+            menuItem.state = Preferences.shareClipboard ? .on : .off
+        default:
+            break
         }
         return true
     }
@@ -73,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             let config = try VVConfig(contentsOf: url)
             let params = try SpiceConnectionParameters(from: config)
             let client = SpiceClient(parameters: params)
+            client.shareClipboard = Preferences.shareClipboard
             let controller = SpiceWindowController(client: client, sourceURL: url)
             controller.onClose = { [weak self, weak controller] in
                 self?.windowControllers.removeAll { $0 === controller }

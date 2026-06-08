@@ -13,6 +13,17 @@ enum Preferences {
             NotificationCenter.default.post(name: .hideHostCursorChanged, object: nil)
         }
     }
+
+    private static let shareClipboardKey = "ShareClipboard"
+
+    /// Whether to share the clipboard with the guest (both directions). Default
+    /// ON (matches virt-viewer and the working behavior). Disable it when
+    /// connecting to an untrusted VM — while on, anything you copy on the Mac is
+    /// sent to the guest. Takes effect on the next connection.
+    static var shareClipboard: Bool {
+        get { (UserDefaults.standard.object(forKey: shareClipboardKey) as? Bool) ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: shareClipboardKey) }
+    }
 }
 
 extension Notification.Name {

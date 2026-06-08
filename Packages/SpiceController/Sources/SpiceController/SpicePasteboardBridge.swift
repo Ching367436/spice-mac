@@ -78,9 +78,13 @@ public final class SpicePasteboardBridge: NSObject, CSPasteboardDelegate {
     // self-write tracking). CocoaSpice also does NOT clear the pasteboard first,
     // and setData/setString silently no-op without a preceding clearContents.
 
+    /// Cap on guest→host clipboard payloads, to bound what a hostile guest can
+    /// push onto the host pasteboard.
+    private static let maxClipboardBytes = 64 * 1024 * 1024
+
     @objc(setData:forType:)
     public func setData(_ data: Data, for type: CSPasteboardType) {
-        guard let nsType = Self.nsType(type) else { return }
+        guard let nsType = Self.nsType(type), data.count <= Self.maxClipboardBytes else { return }
         onMain {
             self.pasteboard.clearContents()
             _ = self.pasteboard.setData(data, forType: nsType)
@@ -94,7 +98,11 @@ public final class SpicePasteboardBridge: NSObject, CSPasteboardDelegate {
     }
 
     @objc(setString:)
-    public func setString(_ string: String) {
+    public func setString(_ string: String?) {
+        // A malicious guest can send non-UTF8 bytes as "UTF8 text", which arrives
+        // here as nil — drop it rather than crash (and don't clobber the host
+        // clipboard with garbage). Also cap the size.
+        guard let string, string.utf8.count <= Self.maxClipboardBytes else { return }
         onMain {
             self.pasteboard.clearContents()
             _ = self.pasteboard.setString(string, forType: .string)

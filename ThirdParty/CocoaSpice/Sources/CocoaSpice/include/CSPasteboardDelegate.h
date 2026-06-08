@@ -66,8 +66,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable NSString *)string;
 
 /// Sets a string type pasteboard item to system
-/// @param string Pasteboard data
-- (void)setString:(NSString *)string;
+/// @param string Pasteboard data. spice-mac: made nullable — a guest can send
+///   non-UTF8 bytes labelled as UTF8 text, and CSSession turns that into a nil
+///   NSString; the delegate must tolerate nil rather than trap.
+- (void)setString:(nullable NSString *)string;
 
 /// Clears the pasteboard
 - (void)clearContents;

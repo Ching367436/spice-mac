@@ -145,18 +145,23 @@ static void cs_update_monitor_area(SpiceChannel *channel, GParamSpec *pspec, gpo
         goto whole;
     
     g_object_get(self.channel, "monitors", &monitors, NULL);
-    //for (i = 0; monitors != NULL && i < monitors->len; i++) {
-    //    cfg = &g_array_index(monitors, SpiceDisplayMonitorConfig, i);
-    //    if (cfg->id == self.monitorID) {
-    //        c = cfg;
-    //        break;
-    //    }
-    //}
-    g_assert(monitors->len <= 1);
-    if (monitors->len == 0) {
+    // spice-mac (security): never g_assert on attacker-controlled SPICE fields. A
+    // multi-head monitors config (len >= 2) is protocol-legal; the original
+    // g_assert(monitors->len <= 1) aborted the whole process on such a config (a
+    // remote DoS from a malicious/compromised guest). Restore the upstream loop:
+    // find our head by id, and fall through to the whole-surface path otherwise.
+    for (i = 0; monitors != NULL && i < monitors->len; i++) {
+        cfg = &g_array_index(monitors, SpiceDisplayMonitorConfig, i);
+        if (cfg->id == self.monitorID) {
+            c = cfg;
+            break;
+        }
+    }
+    if (monitors == NULL || monitors->len == 0) {
         SPICE_DEBUG("[CocoaSpice] update monitor: no monitor %d", (int)self.monitorID);
         self.ready = NO;
-        if (spice_channel_test_capability(SPICE_CHANNEL(self.channel),
+        if (monitors != NULL &&
+            spice_channel_test_capability(SPICE_CHANNEL(self.channel),
                                           SPICE_DISPLAY_CAP_MONITORS_CONFIG)) {
             SPICE_DEBUG("[CocoaSpice] waiting until MonitorsConfig is received");
             g_clear_pointer(&monitors, g_array_unref);
@@ -164,7 +169,10 @@ static void cs_update_monitor_area(SpiceChannel *channel, GParamSpec *pspec, gpo
         }
         goto whole;
     }
-    c = &g_array_index(monitors, SpiceDisplayMonitorConfig, 0);
+    if (c == NULL) {
+        // Our head id isn't present in this (possibly multi-head) config.
+        goto whole;
+    }
     
     if (c->surface_id != 0) {
         g_warning("FIXME: only support monitor config with primary surface 0, "

@@ -53,6 +53,13 @@ enum MainMenu {
         release.keyEquivalentModifierMask = [.control, .option]
         connMenu.addItem(release)
         connMenu.addItem(.separator())
+        let shareClipboard = NSMenuItem(title: "Share Clipboard with VM",
+                                        action: #selector(AppDelegate.toggleShareClipboard(_:)), keyEquivalent: "")
+        shareClipboard.state = Preferences.shareClipboard ? .on : .off
+        shareClipboard.toolTip = "Share the clipboard with the VM (both directions). "
+            + "Takes effect on the next connection. Turn off for untrusted VMs."
+        connMenu.addItem(shareClipboard)
+        connMenu.addItem(.separator())
         // USB submenu, populated dynamically by the window controller.
         let usbItem = NSMenuItem(title: "USB Devices", action: nil, keyEquivalent: "")
         let usbMenu = NSMenu(title: "USB Devices")

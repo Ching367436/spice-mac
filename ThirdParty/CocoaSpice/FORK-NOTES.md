@@ -24,6 +24,22 @@ A single category method, `-[CSConnection setProxy:ca:certSubject:]`:
 
 The diff against pristine upstream is saved at `../cocoaspice-proxmox.patch`.
 
+## Security hardening (spice-mac additions)
+
+Beyond the Proxmox patch and the `CocoaSpiceRenderer` product, this fork carries a
+few security fixes for guest-triggered crashes / unsafe defaults. Re-apply these
+on a rebase:
+
+- **`Sources/CocoaSpice/CSDisplay.m`** (`cs_update_monitor_area`) — replaced
+  `g_assert(monitors->len <= 1)` (which aborts the process on a protocol-legal
+  multi-head config — a remote DoS) with the upstream find-our-head-by-id loop.
+- **`Sources/CocoaSpice/include/CSPasteboardDelegate.h`** — `setString:` made
+  `nullable` so a guest sending non-UTF8 "text" (→ nil NSString) can't trap the
+  Swift bridge.
+- **`Sources/CocoaSpice/CSSession.m`** (`initWithSession:`) — removed the
+  unconditional `setSharedDirectory:readOnly:NO`, which auto-shared a **writable**
+  host folder with every guest.
+
 ## Updating upstream
 
 To re-base onto a newer CocoaSpice: replace this directory with the new upstream

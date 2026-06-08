@@ -160,6 +160,14 @@ must be *captured* away from that driver to redirect it — which requires one o
 many JTAG/printer dongles) redirect **without root** — check with
 `ioreg -p IOUSB -l | grep IOUSBHostInterface` (no class-driver client bound → OK).
 
+## Security
+
+See [SECURITY.md](SECURITY.md). In short: the app code is sound (no RCE/memory-
+corruption; TLS fails closed), but it bundles an **EOL native stack** (OpenSSL
+1.1.1b etc.) that should be refreshed before wider distribution, clipboard sharing
+is on by default (toggle in the Connection menu), and `run-as-root.sh` runs the
+whole parser surface as root — fine for personal use against trusted VMs.
+
 ## Licensing
 
 - App code in this repo: see `LICENSE`.

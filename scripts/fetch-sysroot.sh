@@ -72,10 +72,18 @@ stage() {
 
 from_url() {
     local url="$1" out="$WORK/sysroot.tgz"
+    # The sysroot is the entire native TLS + parser stack; a tampered download is
+    # game over. Require a pinned SHA256 and fail closed (set SPICEMAC_SYSROOT_SHA256_INSECURE=1
+    # to deliberately bypass for a one-off local test).
+    if [ -z "${SPICEMAC_SYSROOT_SHA256:-}" ] && [ "${SPICEMAC_SYSROOT_SHA256_INSECURE:-}" != "1" ]; then
+        die "refusing to download an unverified sysroot — set SPICEMAC_SYSROOT_SHA256 to the pinned digest"
+    fi
     log "downloading $url"
     curl -fL --retry 3 -o "$out" "$url" || die "download failed"
     if [ -n "${SPICEMAC_SYSROOT_SHA256:-}" ]; then
         echo "${SPICEMAC_SYSROOT_SHA256}  $out" | shasum -a 256 -c - || die "checksum mismatch"
+    else
+        log "WARNING: SPICEMAC_SYSROOT_SHA256_INSECURE=1 — skipping integrity check (unsafe)"
     fi
     mkdir -p "$WORK/x"; tar -xzf "$out" -C "$WORK/x"
     stage "$(find_sysroot_root "$WORK/x")"

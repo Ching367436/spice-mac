@@ -310,10 +310,14 @@ static void cs_channel_destroy(SpiceSession *session, SpiceChannel *channel,
         
         self.session = g_object_ref(session);
         
-        // g_get_user_special_dir(G_USER_DIRECTORY_PUBLIC_SHARE) returns NULL so we replace it with a valid value here
-        [self createDefaultShareReadme];
-        [self setSharedDirectory:self.defaultPublicShare.path readOnly:NO];
-        
+        // spice-mac (security): do NOT auto-share a WRITABLE host directory with
+        // every guest. The upstream default exposed a read-write folder to an
+        // untrusted VM (a hostile guest could write/fill files on the host). Folder
+        // sharing should be opt-in and read-only by default; until there's UI for
+        // that, leave no directory shared.
+        //   [self createDefaultShareReadme];
+        //   [self setSharedDirectory:self.defaultPublicShare.path readOnly:NO];
+
         SPICE_DEBUG("[CocoaSpice] %s:%d", __FUNCTION__, __LINE__);
         g_signal_connect(session, "channel-new",
                          G_CALLBACK(cs_channel_new), (__bridge void *)self);

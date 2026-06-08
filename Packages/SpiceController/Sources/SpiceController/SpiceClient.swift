@@ -37,6 +37,11 @@ public final class SpiceClient: NSObject, ObservableObject {
     /// The most recently announced inputs channel (keyboard/mouse).
     public private(set) var primaryInput: CSInput?
 
+    /// Whether to share the clipboard with the guest (both directions). Set before
+    /// `connect()`. While on, anything copied on the host is sent to the guest, so
+    /// disable it for untrusted VMs.
+    public var shareClipboard: Bool = true
+
     /// USB redirection manager for the active connection, if any.
     public var usbManager: CSUSBManager? { connection?.usbManager }
 
@@ -72,6 +77,14 @@ public final class SpiceClient: NSObject, ObservableObject {
         guard connection == nil, !didAttemptConnect else { return }
         didAttemptConnect = true
 
+        // Fail closed: certificate-subject verification is meaningless without a CA
+        // to anchor the chain. (A real Proxmox .vv always provides both; this guards
+        // a malformed/hostile file from a weakened-verification connect.)
+        if parameters.isTLS && parameters.verifySubject && (parameters.caPEM?.isEmpty ?? true) {
+            status = .failed("Refusing to connect: the file requests certificate-subject verification but supplies no CA certificate.")
+            return
+        }
+
         let main = CSMain.shared
         if !main.running {
             guard main.spiceStart() else {
@@ -105,8 +118,8 @@ public final class SpiceClient: NSObject, ObservableObject {
                           certSubject: parameters.certSubject)
         }
 
-        // Clipboard sharing (requires the guest vdagent to actually take effect).
-        conn.session.shareClipboard = true
+        // Clipboard sharing (opt-out; requires the guest vdagent to take effect).
+        conn.session.shareClipboard = shareClipboard
         conn.session.pasteboardDelegate = pasteboard
 
         connection = conn
@@ -118,8 +131,10 @@ public final class SpiceClient: NSObject, ObservableObject {
         }
 
         // Poll the host pasteboard so host→guest copy works (macOS has no native
-        // pasteboard-change notification).
-        pasteboard.startMonitoring()
+        // pasteboard-change notification) — only when sharing is enabled.
+        if shareClipboard {
+            pasteboard.startMonitoring()
+        }
     }
 
     /// Request disconnect. Final teardown is reported via `spiceDisconnected:`.
