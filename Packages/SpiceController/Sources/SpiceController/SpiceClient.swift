@@ -114,7 +114,12 @@ public final class SpiceClient: NSObject, ObservableObject {
         if !conn.connect() {
             status = .failed("Failed to initiate the SPICE connection.")
             connection = nil
+            return
         }
+
+        // Poll the host pasteboard so host→guest copy works (macOS has no native
+        // pasteboard-change notification).
+        pasteboard.startMonitoring()
     }
 
     /// Request disconnect. Final teardown is reported via `spiceDisconnected:`.
@@ -137,6 +142,7 @@ extension SpiceClient: CSConnectionDelegate {
 
     public func spiceDisconnected(_ connection: CSConnection) {
         onMain {
+            self.pasteboard.stopMonitoring()
             self.status = .disconnected
             self.agentConnected = false
             self.supportsDynamicResolution = false
