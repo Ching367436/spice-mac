@@ -10,3 +10,5 @@ ThirdParty/CocoaSpice/.build/
 .DS_Store
 Package.resolved
 .claude/
+# Never commit a connection file — it carries a live ticket + CA.
+*.vv

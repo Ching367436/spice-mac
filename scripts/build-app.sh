@@ -37,10 +37,25 @@ if ! xcode-select -p 2>/dev/null | grep -q "Xcode.app"; then
 fi
 
 shopt -s nullglob
-frameworks=(Frameworks/*.framework)
-if [ ${#frameworks[@]} -eq 0 ]; then
-    die "Frameworks/ is empty — run scripts/fetch-sysroot.sh first."
-fi
+# Only the frameworks the client actually loads (the runtime closure, computed via
+# `otool -L` over the built binary). This DELIBERATELY excludes the rest of the UTM
+# sysroot — most importantly the GPL-2.0 QEMU frameworks (qemu-*-softmmu, qemu-img)
+# plus spice-server, swtpm, virglrenderer, slirp, MoltenVK/vulkan/epoxy — which the
+# SPICE *client* never loads and which would attach GPL obligations (and ~390 MB of
+# dead weight) to the distributed .app. Re-verify after changing with:
+#   otool -L build/SpiceMac.app/Contents/MacOS/SpiceMac  (and recurse over frameworks)
+RUNTIME_FRAMEWORKS=(
+    glib-2.0.0 gobject-2.0.0 gio-2.0.0 gmodule-2.0.0 ffi.8 intl.8 iconv.2
+    spice-client-glib-2.0.8
+    gstreamer-1.0.0 gstbase-1.0.0 gstapp-1.0.0 gstaudio-1.0.0 gstvideo-1.0.0
+    gstpbutils-1.0.0 gsttag-1.0.0
+    phodav-3.0.0 soup-3.0.0
+    usb-1.0.0 usbredirhost.1 usbredirparser.1
+    json-glib-1.0.0 pixman-1.0 jpeg.62 opus.0
+    crypto.1.1 ssl.1.1
+)
+[ -d "Frameworks/glib-2.0.0.framework" ] \
+    || die "Frameworks/ not staged — run scripts/fetch-sysroot.sh first."
 
 # --- Build -----------------------------------------------------------------
 log "swift build -c $CONFIG"
@@ -93,8 +108,10 @@ else
     log "WARNING: renderer shader not found; display rendering may not work"
 fi
 
-# Native SPICE frameworks.
-for fw in "${frameworks[@]}"; do
+# Native SPICE frameworks — allowlist only (see RUNTIME_FRAMEWORKS above).
+for name in "${RUNTIME_FRAMEWORKS[@]}"; do
+    fw="Frameworks/$name.framework"
+    [ -d "$fw" ] || die "missing required framework: $fw (re-run fetch-sysroot.sh)"
     cp -R "$fw" "$APP/Contents/Frameworks/"
 done
 

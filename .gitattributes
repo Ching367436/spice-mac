@@ -1,0 +1,7 @@
+# Don't let the 600+ vendored C headers dominate GitHub's language stats — this is
+# a Swift/Objective-C project.
+ThirdParty/** linguist-vendored
+
+# Normalize line endings.
+* text=auto eol=lf
+*.sh text eol=lf
