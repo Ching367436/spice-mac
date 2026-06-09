@@ -71,6 +71,9 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Framewor
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 cp "$BIN_PATH/$APP_NAME" "$APP/Contents/MacOS/$APP_NAME"
 
+# App icon (CFBundleIconFile=AppIcon). Regenerate with scripts/make-icon.sh.
+[ -f "$ROOT/Resources/AppIcon.icns" ] && cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+
 # SwiftPM resource bundles (e.g. the compiled Metal shader for the renderer).
 # SwiftPM resource bundles go in Contents/Resources (CocoaSpice's renderer loads
 # CocoaSpice_CocoaSpiceRenderer.bundle from mainBundle.resourceURL).

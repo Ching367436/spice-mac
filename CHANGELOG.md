@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-06-09
+
+### Added
+
+- **App icon** — a warm "spice"-palette squircle with a glowing remote-console
+  screen and signal arcs. Wired in via `CFBundleIconFile`; shows in the Dock,
+  Finder, and ⌘-Tab. Source art + the masking pipeline live in `design/icon/`;
+  regenerate the `.icns` with `scripts/make-icon.sh`.
+
 ## [0.1.1] — 2026-06-09
 
 Adds a **prebuilt download** alongside the source release.
@@ -73,6 +82,7 @@ CocoaSpice.
   QEMU frameworks are no longer shipped (app size 443 MB → 23 MB).
 - See [SECURITY.md](SECURITY.md) for the threat model and residual risks.
 
-[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/Ching367436/spice-mac/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Ching367436/spice-mac/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Ching367436/spice-mac/releases/tag/v0.1.0
