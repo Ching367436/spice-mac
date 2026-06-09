@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-06-09
+
+### Security
+
+- **Multi-head monitor-config crash (DoS), second site.** A guest reporting more
+  than one monitor config on a display channel — a protocol-legal multi-head
+  configuration — tripped `g_assert(cfgs->len == 1)` in `cs_display_monitors` and
+  aborted the whole client. Removed the assert; the handler now just creates/updates
+  the (single-display-per-channel) display on any non-empty config, leaving per-head
+  geometry to `cs_update_monitor_area`. Same DoS class as the `cs_update_monitor_area`
+  fix already shipped. (Fork change — see `ThirdParty/CocoaSpice/FORK-NOTES.md`.)
+
 ## [0.1.3] — 2026-06-09
 
 ### Added
@@ -111,7 +123,8 @@ CocoaSpice.
   QEMU frameworks are no longer shipped (app size 443 MB → 23 MB).
 - See [SECURITY.md](SECURITY.md) for the threat model and residual risks.
 
-[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/Ching367436/spice-mac/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/Ching367436/spice-mac/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/Ching367436/spice-mac/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Ching367436/spice-mac/compare/v0.1.0...v0.1.1

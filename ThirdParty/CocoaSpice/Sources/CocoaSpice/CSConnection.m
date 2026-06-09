@@ -115,8 +115,14 @@ static void cs_display_monitors(SpiceChannel *channel, GParamSpec *pspec,
     assert(display);
     
     SPICE_DEBUG("[CocoaSpice] display %ld now has %d monitors", display.channelID, cfgs->len);
+    // spice-mac (security): never g_assert on attacker-controlled SPICE fields. A
+    // multi-head monitors config (len >= 2) is protocol-legal; the original
+    // g_assert(cfgs->len == 1) aborted the whole process on such a config (a remote
+    // DoS from a malicious/compromised guest). This app is single-display per
+    // channel, so any non-empty config means the display exists — create/update it
+    // and let cs_update_monitor_area (CSDisplay.m) pick out our head's geometry by
+    // id. Treat an empty config as the display being gone.
     if (cfgs->len > 0) {
-        g_assert(cfgs->len == 1);
         if (display.hasInitialConfig) {
             [self.delegate spiceDisplayUpdated:self display:display];
         } else {

@@ -33,6 +33,11 @@ on a rebase:
 - **`Sources/CocoaSpice/CSDisplay.m`** (`cs_update_monitor_area`) — replaced
   `g_assert(monitors->len <= 1)` (which aborts the process on a protocol-legal
   multi-head config — a remote DoS) with the upstream find-our-head-by-id loop.
+- **`Sources/CocoaSpice/CSConnection.m`** (`cs_display_monitors`) — removed
+  `g_assert(cfgs->len == 1)` (same DoS class: a multi-head monitors config from
+  a malicious/multi-monitor guest aborted the whole client). The handler only
+  needs to know whether the display has any heads (create/update) or none
+  (destroy); per-head geometry is resolved by `cs_update_monitor_area`.
 - **`Sources/CocoaSpice/include/CSPasteboardDelegate.h`** — `setString:` made
   `nullable` so a guest sending non-UTF8 "text" (→ nil NSString) can't trap the
   Swift bridge.

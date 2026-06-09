@@ -31,8 +31,10 @@ gate any wider distribution.
   by sending non-UTF8 bytes labelled as text (nil trapped the Swift bridge). The
   delegate is now nullable and guards nil; guest payloads are size-capped.
 - **Multi-head monitor-config crash (DoS)** — a protocol-legal multi-head config
-  hit a `g_assert` and aborted the process; restored the upstream find-by-id loop
-  (never assert on attacker-controlled SPICE fields).
+  hit a `g_assert` and aborted the process, in two places: the per-surface area
+  update (restored the upstream find-by-id loop) and the display create/update
+  handler (`cs_display_monitors`, where the assert was simply removed). Never
+  assert on attacker-controlled SPICE fields.
 - **Writable host folder auto-shared to every guest** — removed; folder sharing
   should be opt-in and read-only (no UI yet → nothing shared).
 - **Clipboard sharing is now a preference** (Connection ▸ Share Clipboard with VM,
