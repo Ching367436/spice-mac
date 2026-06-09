@@ -40,6 +40,26 @@ on a rebase:
   unconditional `setSharedDirectory:readOnly:NO`, which auto-shared a **writable**
   host folder with every guest.
 
+## Bug fixes (spice-mac additions)
+
+- **`Sources/CocoaSpice/CSDisplay.m` + `CSDisplay+Renderer.m`** — **blank screen on
+  connect** (shown only after the guest next repaints, e.g. a click). Two parts:
+  - The SPICE main loop runs on its own thread (`CSMain`). A display's primary
+    surface is created there (`cs_primary_create` → `updateVisibleAreaWithRect:` →
+    `rebuildCanvasTexture`), but the Metal **device** only arrives when a renderer
+    attaches — from the app thread, via `-addRenderer:`. On connect the surface is
+    usually created *before* the renderer attaches, so `rebuildCanvasTexture`
+    early-returns on the nil device and there is no Metal canvas; the renderer then
+    draws nothing until a later server damage event. Fix: `-addRenderer:` calls the
+    new `-refreshContentsForNewRenderer`, which hops to the SPICE context and, with
+    a device now available, builds the canvas (if not yet built) and repaints the
+    current framebuffer.
+  - In `updateVisibleAreaWithRect:`, build the vertices and set `ready` *before*
+    `rebuildCanvasTexture`, so its initial `drawRegion:` sees `-isVisible` YES
+    (`_CSRendererSourceData initWithRenderSource:` returns nil when vertices are
+    missing, which otherwise drops the first blit) — this covers the case where a
+    renderer/device *is* already attached when the surface is (re)created.
+
 ## Updating upstream
 
 To re-base onto a newer CocoaSpice: replace this directory with the new upstream

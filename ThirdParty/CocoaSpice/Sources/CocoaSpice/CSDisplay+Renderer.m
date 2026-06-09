@@ -39,6 +39,10 @@
         NSAssert(self.device == renderer.device, @"Cannot use two renderers from different Metal devices!");
     }
     [renderer invalidateRenderSource:self withCompletion:nil];
+    // spice-mac: the primary surface may have been created (on the SPICE thread)
+    // before this device was available, leaving no Metal canvas — so paint the
+    // current framebuffer now that a renderer/device is attached. See CSDisplay.m.
+    [self refreshContentsForNewRenderer];
 }
 
 - (void)removeRenderer:(id<CSRenderer>)renderer {

@@ -430,11 +430,47 @@ static void cs_gl_draw(SpiceDisplayChannel *channel,
         self.visibleArea = visible;
     }
     self.displaySize = self.visibleArea.size;
+    // spice-mac fix (blank screen on connect): build the vertices and mark the
+    // surface ready BEFORE rebuildCanvasTexture. rebuildCanvasTexture issues the
+    // initial full-surface drawRegion: (the first framebuffer paint); upstream ran
+    // it here while vertices/ready were still unset, so the renderer's -isVisible
+    // was NO, _CSRendererSourceData initWithRenderSource: returned nil, and that
+    // first pixel blit was silently dropped. The view then stayed blank until the
+    // first server damage event (e.g. a mouse move) issued another drawRegion:.
+    // Ordering the readiness state first makes -isVisible YES during the initial
+    // draw, so it lands. (No-op for the GL path, which paints via cs_gl_draw.)
+    [self rebuildDisplayVertices];
+    self.ready = YES;
     if (!self.isGLEnabled) {
         [self rebuildCanvasTexture];
     }
-    [self rebuildDisplayVertices];
-    self.ready = YES;
+}
+
+// spice-mac: see CSDisplay+Protected.h. The SPICE main loop runs on its own thread
+// (CSMain); a display's primary surface is created there (cs_primary_create), while
+// the Metal device only arrives when a renderer attaches — from the app thread, via
+// -addRenderer:. If primary-create ran first, rebuildCanvasTexture early-returned on
+// the nil device and there is no Metal canvas yet, so the renderer draws nothing
+// until a later server damage event (which is why the screen was blank on connect
+// until the guest next repainted — e.g. on a click). When a renderer attaches, hop
+// to the SPICE context (where the canvas data is safe to touch) and, with a device
+// now available, build the canvas if needed and repaint the current framebuffer.
+- (void)refreshContentsForNewRenderer {
+    [CSMain.sharedInstance asyncWith:^{
+        if (self.isGLEnabled || self.device == nil || CGRectIsEmpty(self.canvasArea)) {
+            return; // GL paints via cs_gl_draw; or no primary surface yet (primary-create will paint)
+        }
+        if (self.canvasBuffer == nil || self.canvasTexture == nil) {
+            // Surface existed before a device did → build it now (order vertices/ready
+            // before rebuildCanvasTexture so its initial drawRegion: actually lands).
+            [self rebuildDisplayVertices];
+            self.ready = YES;
+            [self rebuildCanvasTexture];
+        } else {
+            // Already built → just repaint the current frame for the new renderer.
+            [self drawRegion:self.visibleArea];
+        }
+    }];
 }
 
 - (void)rebuildScanoutTextureWithScanout:(SpiceGlScanout)scanout {

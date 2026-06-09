@@ -41,6 +41,13 @@ NS_ASSUME_NONNULL_BEGIN
 /// @param monitorID Monitor in the channel
 - (instancetype)initWithChannel:(SpiceDisplayChannel *)channel NS_DESIGNATED_INITIALIZER;
 
+/// spice-mac: paint the current framebuffer for a renderer that has just attached.
+/// Dispatches onto the SPICE context (CSMain) and, if the primary surface already
+/// exists, (re)builds the Metal canvas if it wasn't built yet (the device only
+/// arrives when a renderer attaches, which can race after primary-create) and
+/// repaints — so the view isn't blank on connect until the first server draw.
+- (void)refreshContentsForNewRenderer;
+
 @end
 
 NS_ASSUME_NONNULL_END
