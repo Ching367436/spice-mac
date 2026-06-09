@@ -7,6 +7,8 @@ Frameworks/*
 # ThirdParty/CocoaSpice is a vendored Apache-2.0 fork (committed). Ignore only its build output.
 ThirdParty/CocoaSpice/.build/
 *.app
+# Build output / release artifacts (the .app, packaged .zip, checksum).
+/build/
 .DS_Store
 Package.resolved
 .claude/

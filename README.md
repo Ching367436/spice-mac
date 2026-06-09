@@ -21,6 +21,47 @@ UTM uses). Apple-Silicon only.
 > | Audio (guest needs a SPICE audio device) | ✅ |
 > | USB redirection | plumbed |
 
+## Download
+
+Prebuilt `SpiceMac.app` bundles are attached to each
+[Release](https://github.com/Ching367436/spice-mac/releases) (Apple-Silicon only).
+You can also [build from source](#build).
+
+### Why it's unsigned
+
+The prebuilt `.app` is **ad-hoc signed**, not **Developer-ID-signed or notarized**.
+Developer-ID signing + notarization require a paid **Apple Developer Program**
+membership (US$99/yr) this project can't currently fund. Ad-hoc signing is real and
+locally valid — it's why the app runs at all on Apple Silicon — but macOS Gatekeeper
+still treats the download as coming from an unidentified developer and prompts once
+on first launch. If a signed + notarized build matters to you, you can help fund the
+membership (see [Sponsoring](#sponsoring)) or just build from source.
+
+### Opening an unsigned build
+
+After unzipping and moving `SpiceMac.app` to `/Applications`, do one of:
+
+- **macOS 14 (Sonoma):** right-click (Control-click) the app ▸ **Open** ▸ **Open**
+  in the dialog (only needed once).
+- **macOS 15 (Sequoia) and later:** double-click once (you'll see *"Apple could not
+  verify…"* — click **Done**), then **System Settings ▸ Privacy & Security ▸ Open
+  Anyway**, and confirm. (Sequoia removed the old right-click→Open shortcut here.)
+- **Terminal (works on both)** — clear the quarantine flag, then open:
+
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/SpiceMac.app
+  open /Applications/SpiceMac.app
+  ```
+
+Verify your download against the SHA-256 in the release notes before clearing
+quarantine:
+
+```sh
+shasum -a 256 SpiceMac.app.zip   # compare to the value in the Release
+```
+
+See [SECURITY.md](SECURITY.md) for the full signing/trust posture.
+
 ## Why this exists
 
 There is no pleasant native SPICE client on macOS — `remote-viewer`/`spice-gtk`
@@ -173,6 +214,15 @@ distribution. Clipboard sharing is on by default (toggle in the Connection menu)
 and `run-as-root.sh` runs the whole parser surface as root — fine for personal use
 against trusted VMs.
 
+## Sponsoring
+
+SpiceMac is free and open source. The one recurring cost it can't absorb is the
+**Apple Developer Program** membership (US$99/yr) needed to ship Developer-ID-signed,
+notarized builds that open without the Gatekeeper detour above. If you'd like to fund
+that, use the repo's **Sponsor** button (see [`.github/FUNDING.yml`](.github/FUNDING.yml)).
+It's entirely optional — building from source, and rebuilding to verify a download,
+will always stay free.
+
 ## Licensing
 
 - SpiceMac's own code: **MIT** (see [LICENSE](LICENSE)).
@@ -184,8 +234,12 @@ against trusted VMs.
   the LGPL written offer: [THIRD-PARTY-LICENSES.txt](THIRD-PARTY-LICENSES.txt).
 - The GStreamer plugins are **statically** linked, so LGPL §6(a) (rebuildable open app
   source) applies. The build bundles only the runtime closure — the upstream sysroot's
-  **GPL-2.0 QEMU** frameworks are *not* shipped. If you distribute a built `.app`, honor
-  the LGPL source/relink obligations above.
+  **GPL-2.0 QEMU** frameworks are *not* shipped.
+- **Distributing a built `.app`?** It already self-carries the verbatim LGPL-2.1 /
+  Apache-2.0 / OpenSSL / BSD / MIT texts at `Contents/Resources/Licenses/` (sources in
+  [`licenses/`](licenses/)), plus the LGPL §6 written offer in
+  [THIRD-PARTY-LICENSES.txt](THIRD-PARTY-LICENSES.txt). Honor those source/relink
+  obligations when you redistribute.
 
 ## Layout
 

@@ -6,6 +6,31 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-06-09
+
+Adds a **prebuilt download** alongside the source release.
+
+### Added
+
+- **Prebuilt `SpiceMac.app`** attached to the GitHub release (Apple Silicon),
+  **ad-hoc signed** (not Developer-ID-signed/notarized — that needs a paid Apple
+  Developer membership the project can't yet fund). README documents how to open it
+  past Gatekeeper, and each release publishes a **SHA-256** of the zipped app.
+- **`.github/FUNDING.yml`** — sponsorship to fund Developer-ID signing + notarization.
+- **In-bundle license notices** — `build-app.sh` now copies the verbatim LGPL-2.1 /
+  Apache-2.0 / OpenSSL / BSD-3-Clause / MIT texts and `THIRD-PARTY-LICENSES.txt` into
+  `Contents/Resources/Licenses/`, so a distributed binary self-carries the required
+  notices (LGPL-2.1 §6/§1, Apache-2.0 §4(a), OpenSSL/BSD/MIT binary clauses).
+- **`licenses/`** — the verbatim upstream license texts, in the repo.
+
+### Changed
+
+- `THIRD-PARTY-LICENSES.txt` now records the bundled library versions and a proper
+  **LGPL §6 written offer** (valid 3 years, to any third party), replacing the
+  informal source pointer.
+- `build-app.sh` packages the app with `ditto` (preserves symlinks + nested ad-hoc
+  signatures) and strips the leftover absolute Xcode toolchain rpath from the binary.
+
 ## [0.1.0] — 2026-06-08
 
 First public release. A native macOS (Apple Silicon) SPICE client that opens
@@ -48,5 +73,6 @@ CocoaSpice.
   QEMU frameworks are no longer shipped (app size 443 MB → 23 MB).
 - See [SECURITY.md](SECURITY.md) for the threat model and residual risks.
 
-[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Ching367436/spice-mac/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Ching367436/spice-mac/releases/tag/v0.1.0

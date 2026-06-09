@@ -74,6 +74,26 @@ gate any wider distribution.
 4. **Clipboard is shared by default** (host↔guest). While on, anything copied on
    the Mac is sent to the guest. Disable it (Connection menu) for untrusted VMs.
 
+## Verifying a downloaded build
+
+Prebuilt release `.app`s are **ad-hoc signed**, **not Developer-ID-signed or
+notarized** (residual risk 3). Ad-hoc signing gives the bundle a valid local code
+signature but no identity Apple can attribute to a developer, so Gatekeeper warns on
+first launch and the binary's provenance rests on this repo, not on Apple's
+notarization. Notarization is gated on a paid Apple Developer membership (US$99/yr)
+the project can't currently fund; sponsoring (the repo **Sponsor** button) would
+change that.
+
+To establish trust independently:
+
+- **Rebuild from source** and run that instead of the download — the whole build is
+  reproducible from this repo (README *Build*).
+- **Compare the SHA-256.** Each release publishes `shasum -a 256` of the zipped
+  `.app`; check your download matches **before** clearing quarantine.
+
+Never clear quarantine on a build whose hash you haven't verified against the
+release.
+
 ## Reporting
 
 This is a personal/open-source project. For a suspected vulnerability, please

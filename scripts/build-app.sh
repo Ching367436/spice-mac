@@ -115,6 +115,30 @@ for name in "${RUNTIME_FRAMEWORKS[@]}"; do
     cp -R "$fw" "$APP/Contents/Frameworks/"
 done
 
+# --- License notices -------------------------------------------------------
+# A distributed binary must carry the LGPL-2.1/Apache-2.0/OpenSSL/BSD/MIT texts and
+# attribution WITH the .app (LGPL-2.1 §6/§1, Apache-2.0 §4(a), OpenSSL/BSD/MIT
+# binary-redistribution clauses). Ship the verbatim texts + attribution in-bundle.
+log "bundling license notices"
+LIC_DST="$APP/Contents/Resources/Licenses"
+mkdir -p "$LIC_DST"
+cp "$ROOT/licenses/"*.txt "$LIC_DST/"
+cp "$ROOT/THIRD-PARTY-LICENSES.txt" "$APP/Contents/Resources/"
+cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE.txt"
+
+# --- Strip build-host rpath ------------------------------------------------
+# SwiftPM bakes an absolute Xcode toolchain LC_RPATH into the binary. It is unused
+# at runtime (all libswift* resolve from the OS dyld shared cache via /usr/lib/swift),
+# but it leaks a machine-specific path; drop it so the bundle is host-agnostic. The
+# app is (re-)signed below, so this stays sealed.
+XCODE_SWIFT_RPATH="$(otool -l "$APP/Contents/MacOS/$APP_NAME" 2>/dev/null \
+    | awk '/LC_RPATH/{f=1} f&&/path /{print $2; f=0}' \
+    | grep -m1 'Xcode.*Toolchains.*swift' || true)"
+if [ -n "$XCODE_SWIFT_RPATH" ]; then
+    install_name_tool -delete_rpath "$XCODE_SWIFT_RPATH" "$APP/Contents/MacOS/$APP_NAME" \
+        2>/dev/null && log "  stripped host rpath: $XCODE_SWIFT_RPATH" || true
+fi
+
 # --- Sign ------------------------------------------------------------------
 SIGN_ARGS=(--force --sign "$SIGN_IDENTITY")
 if [ "$SIGN_IDENTITY" = "-" ]; then
@@ -146,3 +170,17 @@ codesign --verify --deep --strict --verbose=2 "$APP" || log "WARNING: codesign v
 
 log "done → $APP"
 log "run with: open \"$APP\"   (or pass a file: open -a \"$APP\" connection.vv)"
+
+# --- Package for distribution ----------------------------------------------
+# Use ditto (NOT plain zip): the bundle has ~78 symlinks (framework Versions/Current
+# links) and nested ad-hoc code signatures that plain zip mangles. Publish the
+# SHA-256 in the release notes — for an unsigned/un-notarized download it is the
+# only integrity signal users get.
+if [ "${PACKAGE:-1}" = "1" ]; then
+    ZIP="$OUT/$APP_NAME.app.zip"
+    rm -f "$ZIP" "$ZIP.sha256"
+    log "packaging → $ZIP"
+    ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+    ( cd "$OUT" && shasum -a 256 "$APP_NAME.app.zip" | tee "$APP_NAME.app.zip.sha256" )
+    log "SHA-256 written → $ZIP.sha256 (publish this in the release notes)"
+fi
