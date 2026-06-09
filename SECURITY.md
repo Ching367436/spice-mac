@@ -56,15 +56,25 @@ gate any wider distribution.
 
 ## Residual risks (not fixed in code)
 
-1. **Older native stack (OpenSSL now current).** **OpenSSL is on the supported
-   3.5 LTS branch** (maintained to 2030) — the server-facing TLS stack, the most
-   exposed component, is no longer EOL. The rest of the bundled UTM sysroot is still
-   old: spice-gtk 0.42, glib ~2.69, gstreamer 1.19.1, usbredir. These parse all
-   hostile-server data, so any future server-reachable memory-safety bug there would
-   land unpatched. **Action (for wider distribution):** refresh the sysroot to a
-   newer UTM build (current spice-gtk/glib/gstreamer/usbredir), pin the versions +
-   SHA256. (OpenSSL 3.5 is delivered via the masquerade in `upgrade-openssl.sh` and
-   baked into the pinned sysroot — no spice-gtk rebuild needed for that part.)
+1. **Native stack age (the exposed parts are current; gstreamer/glib lag).** The two
+   most server-exposed native libraries are up to date: **spice-gtk 0.42 is the
+   latest upstream release** (it does the SPICE protocol parsing, TLS, and display),
+   and **OpenSSL is on the supported 3.5 LTS branch** (the masquerade in
+   `upgrade-openssl.sh`, baked into the pinned sysroot). The genuinely old pieces are
+   lower-priority and hard to move:
+   - **gstreamer 1.19.1** (audio/video decode). UTM pins this exact version and ships
+     no newer one, so a sysroot refresh wouldn't help; moving to 1.24+ means building
+     it ourselves, and the 1.19→1.24 API jump risks breaking the CocoaSpice audio
+     path. Deferred as poor ROI — audio decode is a narrower surface than TLS/protocol
+     and only active when the guest has a SPICE audio device.
+   - **glib ~2.69** (general runtime; the SPICE protocol parsing is in spice-gtk, not
+     glib). A newer UTM sysroot would bump it to ~2.83, but it's a lower-risk
+     component, the target is a dev version, and the migration (header/ABI jump,
+     re-verify the fork, re-test) isn't free. Deferred.
+
+   **Net:** the high-exposure surface (spice-gtk + OpenSSL) is current; the residual
+   is older gstreamer/glib — lower-priority and either un-updatable via UTM or
+   low-ROI. Revisit if a known server-reachable CVE lands in those.
 
 2. **Running as root for USB.** `scripts/run-as-root.sh` runs the *entire* app —
    including the SPICE/TLS/glib/gstreamer/clipboard/agent parsers that consume

@@ -187,10 +187,10 @@ glib/spice headers (`clang -fsyntax-only`, exit 0).
   `ich9-intel-hda`, backend **SPICE**) and reboot the guest.
 - **`pveproxy` gating.** `/etc/default/pveproxy` `ALLOW_FROM`/cipher rules can
   reset port 3128 even with a valid ticket.
-- **Older deps.** The pinned sysroot ships **OpenSSL 3.5.6 (LTS)**, but the rest of
-  the stack (spice-gtk, glib, gstreamer) is still the older UTM build; acceptable for
-  personal use, but it carries its own CVEs. (A raw UTM sysroot still has OpenSSL
-  1.1.1b — run `upgrade-openssl.sh`.)
+- **Dep ages.** The pinned sysroot ships **OpenSSL 3.5.6 (LTS)** and **spice-gtk 0.42
+  (the latest upstream release)**, but **glib/gstreamer** are still the older UTM build
+  (lower-priority; acceptable for personal use but carry their own CVEs). (A raw UTM
+  sysroot still has OpenSSL 1.1.1b — run `upgrade-openssl.sh`.)
 
 ## USB redirection
 
@@ -221,11 +221,12 @@ many JTAG/printer dongles) redirect **without root** — check with
 ## Security
 
 See [SECURITY.md](SECURITY.md). In short: the app code is sound (no RCE/memory-
-corruption; TLS fails closed). The bundled **OpenSSL is 3.5.6 (LTS, maintained to
-2030)** — the server-facing TLS stack is current — though the rest of the native
-stack (spice-gtk/glib/gstreamer) is still the older UTM build. Clipboard sharing is
-on by default (toggle in the Connection menu), and `run-as-root.sh` runs the whole
-parser surface as root — fine for personal use against trusted VMs.
+corruption; TLS fails closed). The server-exposed native libraries are current —
+**spice-gtk 0.42 is the latest upstream release** and the bundled **OpenSSL is 3.5.6
+(LTS, to 2030)** — while glib/gstreamer are still the older UTM build (lower-priority;
+see SECURITY.md). Clipboard sharing is on by default (toggle in the Connection menu),
+and `run-as-root.sh` runs the whole parser surface as root — fine for personal use
+against trusted VMs.
 
 ## Sponsoring
 
