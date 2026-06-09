@@ -28,12 +28,19 @@ trap 'rm -rf "$WORK"' EXIT
 log() { printf '\033[1;34m[build-app]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[build-app] error:\033[0m %s\n' "$*" >&2; exit 1; }
 
-# --- Preconditions ---------------------------------------------------------
+# --- Preconditions (fail fast — don't produce a broken app) ----------------
+# Full Xcode must be selected (Command Line Tools alone can't build this).
 if ! xcode-select -p 2>/dev/null | grep -q "Xcode.app"; then
-    log "WARNING: full Xcode does not appear to be selected."
-    log "         CocoaSpice's Metal shader needs the Xcode Metal toolchain;"
-    log "         'swift build' will fail under Command Line Tools only."
-    log "         Install Xcode and: sudo xcode-select -s /Applications/Xcode.app"
+    die "full Xcode is not selected (got: $(xcode-select -p 2>/dev/null)).
+         Fix: sudo xcode-select -s /Applications/Xcode.app   (or run scripts/doctor.sh)"
+fi
+# The Metal toolchain (a separate component on Xcode 26) compiles CocoaSpice's
+# shader. If it's missing the app builds but the display never renders — so fail
+# HERE rather than ship a silently-broken bundle. Override with ALLOW_NO_METAL=1.
+if [ "${ALLOW_NO_METAL:-0}" != "1" ] && ! xcrun -sdk macosx metal --version >/dev/null 2>&1; then
+    die "the Metal toolchain is not installed (xcrun metal failed).
+         Fix: xcodebuild -downloadComponent MetalToolchain
+         (or set ALLOW_NO_METAL=1 to build a non-rendering app anyway)"
 fi
 
 shopt -s nullglob
@@ -102,10 +109,13 @@ if [ -f "$RENDERER_DIR/CSShaders.metal" ] && [ -d "$RES_BUNDLE" ]; then
 </dict></plist>
 PLIST
         log "  default.metallib OK"
-    else
-        log "WARNING: Metal shader compile failed — the display will not render."
-        log "         Install the Metal toolchain, then re-run: xcodebuild -downloadComponent MetalToolchain"
+    elif [ "${ALLOW_NO_METAL:-0}" = "1" ]; then
+        log "WARNING: Metal shader compile failed but ALLOW_NO_METAL=1 — display will NOT render."
         sed 's/^/         metal: /' "$WORK/metal.log" 2>/dev/null | tail -2
+    else
+        sed 's/^/         metal: /' "$WORK/metal.log" 2>/dev/null | tail -3 >&2
+        die "Metal shader compile failed — the app would not render the display.
+         Fix: xcodebuild -downloadComponent MetalToolchain   (or ALLOW_NO_METAL=1 to ship a non-rendering app)"
     fi
 else
     log "WARNING: renderer shader not found; display rendering may not work"

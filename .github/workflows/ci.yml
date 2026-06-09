@@ -28,3 +28,14 @@ jobs:
       - name: SpiceInputMap — keycode → scancode checks
         working-directory: Packages/SpiceInputMap
         run: swift run inputcheck
+
+      - name: Version consistency (Info.plist / CHANGELOG / links)
+        run: ./scripts/check-version.sh
+
+  shell-lint:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck scripts
+        run: shellcheck --severity=warning -x scripts/*.sh

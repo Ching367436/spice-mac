@@ -110,15 +110,28 @@ adds exactly one method, `-[CSConnection setProxy:ca:certSubject:]`
 
 ## Build
 
+**Prerequisites (one-time).** Full **Xcode** (Command Line Tools alone can't build
+this), then select it and add the Metal toolchain component:
+
 ```sh
-# 1. Stage the native SPICE frameworks (arm64). No args, no GitHub auth — fetches
-#    the pinned, checksummed sysroot from this repo's releases (OpenSSL already 3.5.6 LTS).
-./scripts/fetch-sysroot.sh
+sudo xcode-select -s /Applications/Xcode.app
+xcodebuild -downloadComponent MetalToolchain   # Xcode 26: a separate download
+```
 
-# 2. Build and assemble SpiceMac.app
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/build-app.sh   # → build/SpiceMac.app
+Then, from a fresh clone:
 
-# 3. Run
+```sh
+make doctor   # verify Xcode + Metal toolchain + frameworks (prints fixes if not)
+make all      # fetch the pinned sysroot, then build → build/SpiceMac.app
+make run      # open it
+```
+
+`make` wraps the scripts in `scripts/` and injects `DEVELOPER_DIR` so you can't
+forget it (`make help` lists every target). By hand it's:
+
+```sh
+./scripts/fetch-sysroot.sh   # pinned, checksummed sysroot (OpenSSL already 3.5.6 LTS)
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/build-app.sh
 open build/SpiceMac.app
 ```
 
@@ -127,7 +140,7 @@ open build/SpiceMac.app
 CocoaSpice does **not** bundle the native libraries it links (glib, gstreamer,
 spice-client-glib, libusb, …). `scripts/fetch-sysroot.sh` stages them. By default it
 downloads a **pinned, SHA-256-checksummed** tarball published on this repo's
-[releases](https://github.com/Ching367436/spice-mac/releases/tag/sysroot-arm64-v1) —
+[releases](https://github.com/Ching367436/spice-mac/releases/tag/sysroot-arm64-v2) —
 the 26-framework + 19-plugin build/runtime closure (LGPL/MIT/BSD/OpenSSL only, **no
 GPL**, OpenSSL already 3.5.6 LTS). So a fresh clone builds with no extra setup, and the
 script fails closed on a checksum mismatch.
@@ -266,4 +279,18 @@ building from source, and rebuilding to verify a download, will always stay free
 | `Sources/SpiceMac` | AppKit/Metal application |
 | `ThirdParty/CocoaSpice` | vendored Apache-2.0 fork + Proxmox patch |
 | `Frameworks/` | native SPICE frameworks (staged, git-ignored) |
-| `scripts/` | `fetch-sysroot.sh`, `build-app.sh` |
+| `Makefile` | task runner over `scripts/` (`make help`) |
+
+### Scripts (`scripts/` — or use the `make` target)
+
+| Script | `make` | When you'd run it |
+|--------|--------|-------------------|
+| `doctor.sh` | `doctor` | Check the build environment (Xcode, Metal toolchain, frameworks) |
+| `fetch-sysroot.sh` | `setup` | Stage the native SPICE frameworks (pinned, checksummed) |
+| `build-app.sh` | `build` | Build + assemble `build/SpiceMac.app` |
+| `upgrade-openssl.sh` | `openssl` | Rebuild OpenSSL → 3.5.6 (only on a raw UTM sysroot) |
+| `make-icon.sh` | `icon` | Regenerate `Resources/AppIcon.icns` from `design/icon/` |
+| `debug-run.sh` | `debug VV=…` | Launch with verbose SPICE/CocoaSpice tracing |
+| `run-as-root.sh` | `root VV=…` | Launch as root for USB capture (kernel-claimed devices) |
+| `release.sh` | `release VERSION=…` | Cut a release (bump, changelog, build, tag, publish) |
+| `check-version.sh` | `check-version` | Assert Info.plist / CHANGELOG / tag versions agree |

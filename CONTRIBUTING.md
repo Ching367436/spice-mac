@@ -20,22 +20,57 @@ Thanks for your interest! SpiceMac is a native macOS SPICE client for Proxmox VE
 
 ## Building & testing
 
-The pure-Swift libraries build and test with just the toolchain (no Xcode/sysroot):
+`make help` lists every task. The pure-Swift libraries build and test with just the
+toolchain (no Xcode/sysroot):
 
 ```sh
-( cd Packages/VVConfig      && swift run vvcheck )    # .vv parser
-( cd Packages/SpiceInputMap && swift run inputcheck ) # keycode→scancode map
+make test     # the two dependency-free runners: vvcheck (.vv parser) + inputcheck (keymap)
 ```
 
-The full app needs **Xcode** (Metal toolchain), the **Metal toolchain component**
-(`xcodebuild -downloadComponent MetalToolchain`), and the native SPICE frameworks:
+The full app needs **Xcode** + the **Metal toolchain component**
+(`xcodebuild -downloadComponent MetalToolchain`) + the native SPICE frameworks:
 
 ```sh
-./scripts/fetch-sysroot.sh            # pinned, checksummed sysroot (no args/auth)
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/build-app.sh
+make doctor   # checks the above and prints fixes if anything's missing
+make all      # fetch the sysroot, then build → build/SpiceMac.app
 ```
 
-See [README.md](README.md) for details.
+See [README.md](README.md) for prerequisites and details.
+
+### Environment variables
+
+The scripts read these `SPICEMAC_*` knobs (none are needed for the default path):
+
+| Variable | Script | Default | When to set |
+|----------|--------|---------|-------------|
+| `SPICEMAC_SYSROOT_URL` | fetch-sysroot | (pinned default) | Use your own sysroot tarball |
+| `SPICEMAC_SYSROOT_SHA256` | fetch-sysroot | (pinned default) | Required digest for a custom URL |
+| `SPICEMAC_SYSROOT_FROM_GH` | fetch-sysroot | `0` | `1` = pull a fresh UTM CI artifact (needs `gh`) |
+| `SPICEMAC_SYSROOT_ARTIFACT` | fetch-sysroot | `Sysroot-macos-arm64` | UTM artifact name (GH path) |
+| `SPICEMAC_SYSROOT_ARTIFACT_ID` | fetch-sysroot | (latest) | Pin a specific UTM artifact id |
+| `SPICEMAC_UTM_REPO` | fetch-sysroot | `utmapp/UTM` | Alternate UTM repo (GH path) |
+| `SPICEMAC_SYSROOT_SHA256_INSECURE` | fetch-sysroot | unset | `1` = skip the digest check (unsafe; testing only) |
+| `SPICEMAC_ASSUME_YES` | run-as-root, release | unset | `1` = skip confirmation prompts |
+| `SPICEMAC_LOG` | debug-run | unset | Spice log domains (e.g. `all`) |
+| `ALLOW_NO_METAL` | build-app | unset | `1` = build a non-rendering app without the Metal toolchain |
+
+## Cutting a release (maintainers)
+
+One command does the whole ceremony — bump both `Info.plist` version fields, roll
+`CHANGELOG.md` (`Unreleased` → the new version + compare-links), build the signed
+`.app` + `.zip` + `.sha256`, and (after a y/N confirm) commit, tag, push, and create
+the GitHub release:
+
+```sh
+# Put the changes under '## [Unreleased]' in CHANGELOG.md first, then:
+make release VERSION=0.1.7
+```
+
+It refuses to run on a dirty tree, off `main`, with an existing tag, a non-increasing
+version, or an empty `## [Unreleased]`. It stops and shows the diff **before** the
+irreversible publish. To back out after preparing but before publishing:
+`git checkout Resources/Info.plist CHANGELOG.md`. `make check-version` (also a CI
+gate) asserts `Info.plist` / `CHANGELOG` / the tag stay in agreement.
 
 ## Touching the vendored fork
 
