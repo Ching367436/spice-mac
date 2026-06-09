@@ -31,6 +31,13 @@ enum MainMenu {
                          action: #selector(AppDelegate.openDocument(_:)), keyEquivalent: "o")
         fileMenu.addItem(withTitle: "Close",
                          action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        fileMenu.addItem(.separator())
+        let trashAfterUse = NSMenuItem(title: "Move .vv to Trash After Connecting",
+                                       action: #selector(AppDelegate.toggleTrashConnectionFile(_:)), keyEquivalent: "")
+        trashAfterUse.state = Preferences.trashConnectionFileAfterUse ? .on : .off
+        trashAfterUse.toolTip = "Proxmox SPICE tickets are single-use and the file also holds the "
+            + "cluster CA, so move it to the Trash once it has been used to connect."
+        fileMenu.addItem(trashAfterUse)
 
         // Edit menu (standard responder-chain selectors so clipboard works)
         let editItem = NSMenuItem()

@@ -6,6 +6,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-06-09
+
+### Added
+
+- **Move `.vv` to Trash after connecting** (File menu, default on). Proxmox SPICE
+  tickets are single-use and the file also carries the cluster CA, so the used file
+  is moved to the Trash (recoverable, not a hard delete) once it's opened a
+  connection. Toggle off in **File ▸ Move .vv to Trash After Connecting**.
+
+### Fixed
+
+- **Blank screen on connect.** The display stayed black until the guest next
+  repainted (e.g. a mouse click) because the SPICE loop (its own thread) created the
+  primary surface before a Metal device was available — the device only arrives when
+  a renderer attaches, from the app thread — so `rebuildCanvasTexture` early-returned
+  and no Metal canvas was ever built. `-addRenderer:` now repaints the current
+  framebuffer on the SPICE context once a device is attached, and
+  `updateVisibleAreaWithRect:` orders vertices/ready before the initial draw. (Fork
+  change — see `ThirdParty/CocoaSpice/FORK-NOTES.md`.)
+
 ### Changed
 
 - **Reproducible builds** — `fetch-sysroot.sh` now downloads a **pinned,
@@ -91,7 +111,8 @@ CocoaSpice.
   QEMU frameworks are no longer shipped (app size 443 MB → 23 MB).
 - See [SECURITY.md](SECURITY.md) for the threat model and residual risks.
 
-[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/Ching367436/spice-mac/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/Ching367436/spice-mac/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Ching367436/spice-mac/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Ching367436/spice-mac/releases/tag/v0.1.0

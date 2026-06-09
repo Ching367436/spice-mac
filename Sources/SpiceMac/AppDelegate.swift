@@ -53,12 +53,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         sender.state = Preferences.shareClipboard ? .on : .off
     }
 
+    @objc func toggleTrashConnectionFile(_ sender: NSMenuItem) {
+        Preferences.trashConnectionFileAfterUse.toggle()
+        sender.state = Preferences.trashConnectionFileAfterUse ? .on : .off
+    }
+
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
         case #selector(toggleHideMacCursor(_:)):
             menuItem.state = Preferences.hideHostCursor ? .on : .off
         case #selector(toggleShareClipboard(_:)):
             menuItem.state = Preferences.shareClipboard ? .on : .off
+        case #selector(toggleTrashConnectionFile(_:)):
+            menuItem.state = Preferences.trashConnectionFileAfterUse ? .on : .off
         default:
             break
         }
@@ -92,8 +99,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             windowControllers.append(controller)
             controller.showWindow(nil)
             client.connect()
+            // The .vv has been read into `params`; its SPICE ticket is single-use and
+            // it carries the cluster CA, so move it to the Trash once we've used it to
+            // connect. The file content is already in memory, so this can't affect the
+            // live connection. Only reached on a successful parse (failures go to catch).
+            if Preferences.trashConnectionFileAfterUse {
+                trashConnectionFile(at: url)
+            }
         } catch {
             presentError(error, url: url)
+        }
+    }
+
+    /// Move a used `.vv` to the Trash (best-effort). Trash, not a hard delete, so it's
+    /// recoverable; failures (e.g. a read-only volume) are logged, never fatal.
+    private func trashConnectionFile(at url: URL) {
+        guard url.isFileURL else { return }
+        NSWorkspace.shared.recycle([url]) { _, error in
+            if let error {
+                NSLog("SpiceMac: could not move \(url.lastPathComponent) to Trash: \(error.localizedDescription)")
+            }
         }
     }
 
