@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="design/icon/icon.png" width="168" height="168" alt="SpiceMac app icon">
+</p>
+
 # SpiceMac
 
 A native macOS [SPICE](https://www.spice-space.org/) client that opens **Proxmox VE**
