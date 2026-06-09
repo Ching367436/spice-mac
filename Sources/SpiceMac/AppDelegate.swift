@@ -115,6 +115,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// recoverable; failures (e.g. a read-only volume) are logged, never fatal.
     private func trashConnectionFile(at url: URL) {
         guard url.isFileURL else { return }
+        // When launched as root (scripts/run-as-root.sh, for USB capture), recycle
+        // would move the file into ROOT's Trash (/var/root/.Trash), not the user's —
+        // surprising and unhelpful. The single-use ticket is already spent, so just
+        // leave the file where the user put it; they can remove it themselves.
+        if getuid() == 0 { return }
         NSWorkspace.shared.recycle([url]) { _, error in
             if let error {
                 NSLog("SpiceMac: could not move \(url.lastPathComponent) to Trash: \(error.localizedDescription)")

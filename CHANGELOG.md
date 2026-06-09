@@ -6,6 +6,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-06-09
+
+### Changed
+
+- **Hardened `run-as-root.sh`** (the supported USB-capture path): a clear
+  trust-boundary warning + confirmation prompt (`-y` to skip), absolute-path
+  resolution of the `.vv`, and a `sudo --` option-injection guard. Documented
+  run-as-root honestly in the README and SECURITY.md — including **why a privileged
+  USB helper was scoped and deferred**: macOS forces the boundary at the usbredirhost
+  seam (a partial win that still parses guest data in root, needing a spice-gtk fork +
+  framework rebuild and a sudo-installed LaunchDaemon); the genuinely clean fix is the
+  `com.apple.vm.device-access` entitlement, gated on a Developer ID.
+
+### Fixed
+
+- **`.vv` is no longer moved to root's Trash** when launched via `run-as-root.sh`. The
+  "Move .vv to Trash after connecting" preference is skipped under root (it would
+  otherwise land in `/var/root/.Trash` instead of yours); the file is left in place.
+
 ## [0.1.4] — 2026-06-09
 
 ### Security
@@ -123,7 +142,8 @@ CocoaSpice.
   QEMU frameworks are no longer shipped (app size 443 MB → 23 MB).
 - See [SECURITY.md](SECURITY.md) for the threat model and residual risks.
 
-[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/Ching367436/spice-mac/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/Ching367436/spice-mac/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/Ching367436/spice-mac/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/Ching367436/spice-mac/compare/v0.1.1...v0.1.2

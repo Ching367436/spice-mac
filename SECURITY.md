@@ -61,12 +61,28 @@ gate any wider distribution.
    supported **OpenSSL 3.x** (requires rebuilding spice-gtk) with current
    glib/gstreamer/usbredir, pin the versions + SHA256.
 
-2. **Running as root for USB.** `scripts/run-as-root.sh` runs the *entire* GUI —
-   including the SPICE/glib/gstreamer/OpenSSL/usbredir parsers that consume
-   hostile-server data — as root, so any parser bug becomes root-impact. **Action
-   (for distribution):** move only USB capture into a minimal privileged XPC
-   helper that parses no network data; keep the SPICE stack unprivileged. For
-   personal use, only run as root when you actually need USB, against trusted VMs.
+2. **Running as root for USB.** `scripts/run-as-root.sh` runs the *entire* app —
+   including the SPICE/TLS/glib/gstreamer/clipboard/agent parsers that consume
+   hostile-server data — as root, so any parser bug becomes root-impact. This is the
+   **supported USB path** for an ad-hoc build; the script warns and confirms, and it
+   is only needed to redirect a device a macOS kernel driver owns. **Mitigation
+   today:** only run as root when you actually need such a device (driverless devices
+   don't — see the README), and only against a VM/node you trust.
+
+   **Why not a privileged helper (scoped + deferred).** macOS makes the clean
+   "device-I/O-only helper that parses no network data" impossible: the bundled
+   libusb can't hand a captured device to another process (`wrap_sys_device` is
+   unsupported on Darwin, and IOKit device handles aren't transferable), so the
+   privilege boundary must sit at the **usbredirhost seam** — the helper would host
+   libusb **+ usbredirhost** and still parse guest-influenced usbredir bytes as root
+   (a *partial* win; the TLS/display/clipboard/agent server-data parsers would leave
+   root). It also requires forking spice-gtk and rebuilding the framework, plus a
+   sudo-installed root LaunchDaemon with audit-token client auth (no Developer ID →
+   SMAppService/SMJobBless are out). Given the cost vs. the partial win, it's
+   deferred. The genuinely clean fix is the Apple-restricted
+   `com.apple.vm.device-access` entitlement UTM uses (the bundled libusb already
+   supports it), which needs a Developer ID — gated on the same signing/funding as
+   notarization. Revisit if that lands.
 
 3. **Distribution signing.** The default build is ad-hoc; the optional
    `HARDENED=1` entitlements include `com.apple.security.cs.disable-library-

@@ -198,13 +198,18 @@ driver already owns the device**. macOS auto-binds drivers to mass storage, HID
 (keyboards/mice), USB audio, serial/CDC, iOS devices and hubs, and the device
 must be *captured* away from that driver to redirect it — which requires one of:
 
-- **Root.** The only entitlement-free path on a personal/ad-hoc build. Launch via
-  `./scripts/run-as-root.sh <file>.vv` (the bundled libusb supports macOS device
-  capture). Running a GUI as root is discouraged; capture is whole-device; HID may
-  not detach even as root.
+- **Root** — the supported, entitlement-free path on a personal/ad-hoc build. Launch
+  via `./scripts/run-as-root.sh <file>.vv` (the bundled libusb supports macOS device
+  capture). The script warns and asks for confirmation (`-y` to skip).
+  ⚠️ It runs the **whole app** as root — including the parsers that read data from
+  the SPICE server — so use it only against a VM/node you **trust**, and only when
+  you actually need a kernel-claimed device. Capture is whole-device; HID may not
+  detach even as root. (A privileged helper that would keep the SPICE stack
+  unprivileged was scoped and deferred — see [SECURITY.md](SECURITY.md).)
 - **`com.apple.vm.device-access`** — an Apple-*restricted* entitlement (needs a
   provisioning profile + Apple approval and Developer ID signing; **ad-hoc
-  signatures can't carry it**). This is what UTM's official builds use.
+  signatures can't carry it**). This is what UTM's official builds use, and the
+  genuinely clean fix — gated on the same Developer ID as notarization.
 
 `com.apple.security.device.usb` and Hardened Runtime do **not** help (sandbox-only
 / no-op). **Driverless devices** (vendor-specific class `0xFF`, FTDI on macOS 12+,
