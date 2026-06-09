@@ -219,9 +219,10 @@ against trusted VMs.
 SpiceMac is free and open source. The one recurring cost it can't absorb is the
 **Apple Developer Program** membership (US$99/yr) needed to ship Developer-ID-signed,
 notarized builds that open without the Gatekeeper detour above. If you'd like to fund
-that, use the repo's **Sponsor** button (see [`.github/FUNDING.yml`](.github/FUNDING.yml)).
-It's entirely optional — building from source, and rebuilding to verify a download,
-will always stay free.
+that, use the repo's **Sponsor** button (see [`.github/FUNDING.yml`](.github/FUNDING.yml)),
+or send ETH to **`ching367436.eth`**
+([Etherscan](https://etherscan.io/address/ching367436.eth)). It's entirely optional —
+building from source, and rebuilding to verify a download, will always stay free.
 
 ## Licensing
 
