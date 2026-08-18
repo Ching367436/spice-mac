@@ -1,3 +1,5 @@
+
+
 <p align="center">
   <img src="design/icon/icon.png" width="168" height="168" alt="SpiceMac app icon">
 </p>
@@ -14,7 +16,7 @@ UTM uses). Apple-Silicon only.
 > resize; keyboard including ⌘/modifiers; mouse with the guest cursor aligned to
 > the macOS pointer; bidirectional clipboard; and audio (needs a SPICE audio
 > device on the VM). USB redirection is plumbed via the Connection menu. The `.vv`
-> parser and keyboard map are also unit-tested (28 dependency-free checks).
+> parser and keyboard map are also unit-tested (37 dependency-free checks).
 >
 > | Feature | Status |
 > |---|---|
@@ -180,7 +182,7 @@ CA.
 The pure-Swift libraries build and test with just the Swift toolchain (no Xcode):
 
 ```sh
-( cd Packages/VVConfig     && swift run vvcheck )     # .vv parser: 15 checks
+( cd Packages/VVConfig     && swift run vvcheck )     # .vv parser: 24 checks
 ( cd Packages/SpiceInputMap && swift run inputcheck )  # scancode map: 13 checks
 ```
 
