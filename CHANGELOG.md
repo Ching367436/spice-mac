@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.9] — 2026-11-11
+
 ### Fixed
 
 - **Guest cursor no longer follows the Mac pointer outside the window.** AppKit
@@ -280,7 +282,8 @@ CocoaSpice.
   QEMU frameworks are no longer shipped (app size 443 MB → 23 MB).
 - See [SECURITY.md](SECURITY.md) for the threat model and residual risks.
 
-[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/Ching367436/spice-mac/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/Ching367436/spice-mac/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/Ching367436/spice-mac/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/Ching367436/spice-mac/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/Ching367436/spice-mac/compare/v0.1.5...v0.1.6
