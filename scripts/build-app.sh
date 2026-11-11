@@ -69,6 +69,11 @@ RUNTIME_FRAMEWORKS=(
 
 # --- Build -----------------------------------------------------------------
 SWIFT_BUILD=(swift build -c "$CONFIG")
+if [ "$CONFIG" = "release" ]; then
+    # Map the checkout path to "." so compiled-in source paths (__FILE__) are
+    # relative and the build is host-agnostic. Debug builds keep real paths for lldb.
+    SWIFT_BUILD+=(-Xcc "-ffile-prefix-map=$ROOT=.")
+fi
 if [ "$HAVE_METAL" = "0" ]; then
     # Only reachable with ALLOW_NO_METAL=1. SwiftPM's default build system (Swift
     # Build) compiles the .metal resource itself and fails without the Metal
@@ -165,17 +170,36 @@ cp "$ROOT/licenses/"*.txt "$LIC_DST/"
 cp "$ROOT/THIRD-PARTY-LICENSES.txt" "$APP/Contents/Resources/"
 cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE.txt"
 
-# --- Strip build-host rpath ------------------------------------------------
-# SwiftPM bakes an absolute Xcode toolchain LC_RPATH into the binary. It is unused
-# at runtime (all libswift* resolve from the OS dyld shared cache via /usr/lib/swift),
-# but it leaks a machine-specific path; drop it so the bundle is host-agnostic. The
-# app is (re-)signed below, so this stays sealed.
-XCODE_SWIFT_RPATH="$(otool -l "$APP/Contents/MacOS/$APP_NAME" 2>/dev/null \
-    | awk '/LC_RPATH/{f=1} f&&/path /{print $2; f=0}' \
-    | grep -m1 'Xcode.*Toolchains.*swift' || true)"
-if [ -n "$XCODE_SWIFT_RPATH" ]; then
-    install_name_tool -delete_rpath "$XCODE_SWIFT_RPATH" "$APP/Contents/MacOS/$APP_NAME" \
-        2>/dev/null && log "  stripped host rpath: $XCODE_SWIFT_RPATH" || true
+# --- Strip build-host rpaths -----------------------------------------------
+# SwiftPM bakes absolute toolchain LC_RPATHs into the binary: Xcode's, and with the
+# Swift Build system the Metal toolchain's too. They are unused at runtime (all
+# libswift* resolve from the OS dyld shared cache via /usr/lib/swift), but they leak
+# machine-specific paths; drop them so the bundle is host-agnostic. The app is
+# (re-)signed below, so this stays sealed.
+BIN="$APP/Contents/MacOS/$APP_NAME"
+rpaths() {
+    otool -l "$BIN" 2>/dev/null \
+        | awk '/LC_RPATH/{f=1} f&&/^ *path /{sub(/^ *path /,""); sub(/ \(offset [0-9]+\)$/,""); print; f=0}'
+}
+RPATHS="$(rpaths)"
+while IFS= read -r rp; do
+    case "$rp" in
+        *.xctoolchain/*)
+            install_name_tool -delete_rpath "$rp" "$BIN" 2>/dev/null \
+                && log "  stripped host rpath: $rp" || true ;;
+    esac
+done <<< "$RPATHS"
+
+# Anything machine-specific still in the binary is worth knowing before it ships.
+RPATHS="$(rpaths)"
+while IFS= read -r rp; do
+    case "$rp" in
+        ""|/usr/lib/swift|@*) ;;
+        *) log "WARNING: absolute rpath left in the binary: $rp" ;;
+    esac
+done <<< "$RPATHS"
+if [ "$CONFIG" = "release" ] && [ "$(strings -a "$BIN" | grep -cF "$ROOT/")" != "0" ]; then
+    log "WARNING: the binary still embeds this checkout's path ($ROOT)"
 fi
 
 # --- Sign ------------------------------------------------------------------
