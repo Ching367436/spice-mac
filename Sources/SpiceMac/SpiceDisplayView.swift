@@ -307,7 +307,15 @@ final class SpiceDisplayView: MTKView {
     override func otherMouseUp(with event: NSEvent) { router.mouseButton(event, pressed: false) }
 
     override func mouseMoved(with event: NSEvent) {
-        updateHostCursorVisibility()
+        // The window accepts mouse-moved events, so these also arrive while the
+        // pointer is outside the view. Only hide the Mac cursor over the guest:
+        // outside, the router ignores the motion, so nothing else would show
+        // where the pointer is.
+        if isMousePoint(convert(event.locationInWindow, from: nil), in: bounds) {
+            updateHostCursorVisibility()
+        } else {
+            showHostCursor()
+        }
         router.mouseMoved(event, in: self)
     }
     override func mouseDragged(with event: NSEvent) { router.mouseMoved(event, in: self) }

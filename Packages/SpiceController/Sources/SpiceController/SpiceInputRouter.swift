@@ -163,9 +163,19 @@ public final class SpiceInputRouter {
     public func mouseMoved(_ event: NSEvent, in view: NSView) {
         guard let input else { return }
         if input.serverModeCursor {
+            // Relative mode has no clamped edge to stick to, so deltas are
+            // forwarded wherever the Mac pointer is.
             input.sendMouseMotion(buttonMask,
                                   relativePoint: CGPoint(x: event.deltaX, y: event.deltaY))
         } else {
+            // AppKit delivers mouseMoved to the key window even when the pointer is
+            // outside it. Forwarding those would pin the guest cursor to the clamped
+            // edge and drag it along with the Mac pointer, so ignore them unless a
+            // button is held (a drag that leaves the window must keep tracking).
+            // NB: isMousePoint(_:in:), not bounds.contains — AppKit reports the view's
+            // top pixel row at y == bounds.height, which a half-open rect test excludes.
+            let local = view.convert(event.locationInWindow, from: nil)
+            if buttonMask.isEmpty && !view.isMousePoint(local, in: view.bounds) { return }
             let p = absolutePoint(event, in: view)
             input.sendMousePosition(buttonMask, absolutePoint: p)
             // Client mode: drive the guest cursor overlay ourselves.

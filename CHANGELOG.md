@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Guest cursor no longer follows the Mac pointer outside the window.** AppKit
+  sends `mouseMoved` to the key window even when the pointer is outside it, and
+  in client mouse mode those events were forwarded with coordinates clamped to
+  the guest edge. With a window smaller than the screen, the guest cursor stuck
+  to the edge and slid along it. Motion outside the view is now dropped unless a
+  button is held, so a drag that leaves the window still tracks and releases.
+
 ## [0.1.8] — 2026-08-28
 
 ### Added
