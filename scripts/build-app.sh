@@ -177,6 +177,11 @@ cp "$ROOT/LICENSE" "$APP/Contents/Resources/LICENSE.txt"
 # machine-specific paths; drop them so the bundle is host-agnostic. The app is
 # (re-)signed below, so this stays sealed.
 BIN="$APP/Contents/MacOS/$APP_NAME"
+if [ "$CONFIG" = "release" ]; then
+    # Drop the debug map as well: its entries are absolute object and source paths
+    # that only serve dsymutil/lldb on the build machine.
+    strip -S "$BIN" 2>/dev/null || log "WARNING: could not strip debug symbols from the binary"
+fi
 rpaths() {
     otool -l "$BIN" 2>/dev/null \
         | awk '/LC_RPATH/{f=1} f&&/^ *path /{sub(/^ *path /,""); sub(/ \(offset [0-9]+\)$/,""); print; f=0}'
@@ -198,7 +203,8 @@ while IFS= read -r rp; do
         *) log "WARNING: absolute rpath left in the binary: $rp" ;;
     esac
 done <<< "$RPATHS"
-if [ "$CONFIG" = "release" ] && [ "$(strings -a "$BIN" | grep -cF "$ROOT/")" != "0" ]; then
+# Search the raw bytes: `strings` skips the symbol table, where such paths also live.
+if [ "$CONFIG" = "release" ] && LC_ALL=C grep -aqF "$ROOT/" "$BIN"; then
     log "WARNING: the binary still embeds this checkout's path ($ROOT)"
 fi
 
