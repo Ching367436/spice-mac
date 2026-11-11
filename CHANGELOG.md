@@ -15,6 +15,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   to the edge and slid along it. Motion outside the view is now dropped unless a
   button is held, so a drag that leaves the window still tracks and releases.
 
+- **`make build` works again on current Swift toolchains.** SwiftPM's default
+  build system now compiles the renderer's Metal shader itself and emits the
+  resource bundle in a different layout. `build-app.sh` still compiled the shader
+  and wrote it into the bundle root, which left the bundle unsignable (`unsealed
+  contents present in the bundle root`). It now uses the bundle as built when the
+  shader is already inside, and only compiles it for the legacy build system.
+  `ALLOW_NO_METAL=1` falls back to that legacy build system, since the default
+  one cannot build without the Metal toolchain, and its non-rendering bundle is
+  now signable.
+
 ## [0.1.8] — 2026-08-28
 
 ### Added

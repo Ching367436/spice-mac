@@ -35,9 +35,12 @@ if ! xcode-select -p 2>/dev/null | grep -q "Xcode.app"; then
          Fix: sudo xcode-select -s /Applications/Xcode.app   (or run scripts/doctor.sh)"
 fi
 # The Metal toolchain (a separate component on Xcode 26) compiles CocoaSpice's
-# shader. If it's missing the app builds but the display never renders — so fail
-# HERE rather than ship a silently-broken bundle. Override with ALLOW_NO_METAL=1.
-if [ "${ALLOW_NO_METAL:-0}" != "1" ] && ! xcrun -sdk macosx metal --version >/dev/null 2>&1; then
+# shader. Without it the display never renders, and with SwiftPM's default build
+# system the build itself fails — so fail HERE, with the fix, rather than later or
+# with a silently-broken bundle. Override with ALLOW_NO_METAL=1 (see Build below).
+HAVE_METAL=1
+xcrun -sdk macosx metal --version >/dev/null 2>&1 || HAVE_METAL=0
+if [ "$HAVE_METAL" = "0" ] && [ "${ALLOW_NO_METAL:-0}" != "1" ]; then
     die "the Metal toolchain is not installed (xcrun metal failed).
          Fix: xcodebuild -downloadComponent MetalToolchain
          (or set ALLOW_NO_METAL=1 to build a non-rendering app anyway)"
@@ -65,9 +68,21 @@ RUNTIME_FRAMEWORKS=(
     || die "Frameworks/ not staged — run scripts/fetch-sysroot.sh first."
 
 # --- Build -----------------------------------------------------------------
-log "swift build -c $CONFIG"
-swift build -c "$CONFIG"
-BIN_PATH="$(swift build -c "$CONFIG" --show-bin-path)"
+SWIFT_BUILD=(swift build -c "$CONFIG")
+if [ "$HAVE_METAL" = "0" ]; then
+    # Only reachable with ALLOW_NO_METAL=1. SwiftPM's default build system (Swift
+    # Build) compiles the .metal resource itself and fails without the Metal
+    # toolchain; the legacy "native" one only copies it, which is all a deliberately
+    # non-rendering build needs.
+    case "$(swift build --help 2>/dev/null || true)" in
+        *native*) SWIFT_BUILD+=(--build-system native) ;;
+        *) die "ALLOW_NO_METAL=1 needs SwiftPM's legacy 'native' build system, which this toolchain no longer offers.
+         Fix: xcodebuild -downloadComponent MetalToolchain" ;;
+    esac
+fi
+log "${SWIFT_BUILD[*]}"
+"${SWIFT_BUILD[@]}"
+BIN_PATH="$("${SWIFT_BUILD[@]}" --show-bin-path)"
 [ -x "$BIN_PATH/$APP_NAME" ] || die "built executable not found at $BIN_PATH/$APP_NAME"
 
 # --- Assemble .app ---------------------------------------------------------
@@ -88,18 +103,25 @@ for bundle in "$BIN_PATH"/*.bundle; do
     cp -R "$bundle" "$APP/Contents/Resources/"
 done
 
-# SwiftPM does NOT compile .metal resources (only Xcode's build system does), so
-# compile the CocoaSpice shader into default.metallib inside the renderer bundle —
-# newDefaultLibraryWithBundle: needs it, or the display cannot render.
+# The renderer needs default.metallib inside its resource bundle
+# (newDefaultLibraryWithBundle:), or the display cannot render. Who compiles the
+# shader depends on SwiftPM's build system:
+#   * Swift Build (the default) compiles CSShaders.metal itself and emits a deep
+#     bundle: Contents/Info.plist + Contents/Resources/default.metallib. It is
+#     complete as built, and anything added to its root makes it unsignable
+#     ("unsealed contents present in the bundle root").
+#   * The legacy native build system only copies the .metal source into a flat
+#     bundle, so compile it here and add the Info.plist a signable bundle needs.
 RENDERER_DIR="$ROOT/ThirdParty/CocoaSpice/Sources/CocoaSpiceRenderer"
 RES_BUNDLE="$APP/Contents/Resources/CocoaSpice_CocoaSpiceRenderer.bundle"
-if [ -f "$RENDERER_DIR/CSShaders.metal" ] && [ -d "$RES_BUNDLE" ]; then
-    log "compiling Metal shader → default.metallib"
-    if xcrun -sdk macosx metal -I "$RENDERER_DIR" -c "$RENDERER_DIR/CSShaders.metal" -o "$WORK/CSShaders.air" 2>"$WORK/metal.log" \
-       && xcrun -sdk macosx metallib "$WORK/CSShaders.air" -o "$RES_BUNDLE/default.metallib" 2>>"$WORK/metal.log"; then
-        rm -f "$RES_BUNDLE/CSShaders.metal"        # raw source not needed at runtime
-        # Minimal Info.plist so it is a valid, signable bundle.
-        cat > "$RES_BUNDLE/Info.plist" <<PLIST
+if [ -f "$RES_BUNDLE/Contents/Resources/default.metallib" ]; then
+    log "Metal shader compiled by swift build (default.metallib already in the bundle)"
+elif [ -d "$RES_BUNDLE/Contents" ]; then
+    die "the renderer bundle has no default.metallib — the app would not render the display."
+elif [ -f "$RENDERER_DIR/CSShaders.metal" ] && [ -d "$RES_BUNDLE" ]; then
+    # Minimal Info.plist so it is a valid, signable bundle — needed whether or not
+    # the shader compiles below (codesign rejects a bundle without one).
+    cat > "$RES_BUNDLE/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -108,6 +130,10 @@ if [ -f "$RENDERER_DIR/CSShaders.metal" ] && [ -d "$RES_BUNDLE" ]; then
   <key>CFBundlePackageType</key><string>BNDL</string>
 </dict></plist>
 PLIST
+    log "compiling Metal shader → default.metallib"
+    if xcrun -sdk macosx metal -I "$RENDERER_DIR" -c "$RENDERER_DIR/CSShaders.metal" -o "$WORK/CSShaders.air" 2>"$WORK/metal.log" \
+       && xcrun -sdk macosx metallib "$WORK/CSShaders.air" -o "$RES_BUNDLE/default.metallib" 2>>"$WORK/metal.log"; then
+        rm -f "$RES_BUNDLE/CSShaders.metal"        # raw source not needed at runtime
         log "  default.metallib OK"
     elif [ "${ALLOW_NO_METAL:-0}" = "1" ]; then
         log "WARNING: Metal shader compile failed but ALLOW_NO_METAL=1 — display will NOT render."
